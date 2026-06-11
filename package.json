@@ -1,0 +1,42 @@
+{
+  "name": "dbManager-back",
+  "description": "CustomDatabase manager JS/ModeJS/Fastify/MySQL backend",
+  "version": "0.0.2",
+  "author": "Mark Samios",
+  "license": "GPL-3.0",
+  "keywords": [
+    "database",
+    "manager",
+    "mysql",
+    "fastify",
+    "nodejs"
+  ],
+  "type": "module",
+  "dependencies": {
+    "@fastify/cookie": "^11.0.2",
+    "@fastify/cors": "^11.2.0",
+    "@fastify/formbody": "^8.0.2",
+    "@fastify/multipart": "^9.4.0",
+    "@fastify/sensible": "^6.0.4",
+    "@fastify/session": "^11.1.1",
+    "@fastify/static": "^9.0.0",
+    "@mysql/xdevapi": "^8.0.35",
+    "fastify": "^5.8.2",
+    "lodash-es": "^4.18.1",
+    "mysql2": "^3.22.3",
+    "uuid": "^13.0.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/lodash-es": "^4.17.12",
+    "@types/node": "^25.4.0",
+    "jest": "^30.3.0",
+    "nodemon": "^3.1.14",
+    "tsx": "^4.21.0",
+    "type-plus": "^7.6.2"
+  },
+  "scripts": {
+    "start": "tsx watch src/start.ts",
+    "dump:database": "tsx src/db/dump.ts"
+  }
+}
