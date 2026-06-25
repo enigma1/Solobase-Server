@@ -1,15 +1,21 @@
 import { type RowDataPacket } from 'mysql2';
 import type { Connection } from 'mysql2/promise';
-import { CharsetMeta, MySqlCaps, SessionData } from '>/types';
+import {
+  CharsetMeta,
+  MySqlCaps,
+  SessionData,
+  EngineRow,
+  CharsetRow,
+  CollationRow,
+  UserProfile,
+} from '>/types';
 
 export const getMysqlCapabilities = async (
   sqlSession: Connection,
 ): Promise<MySqlCaps> => {
-  const [charsets] =
-    await sqlSession.query<RowDataPacket[]>(`SHOW CHARACTER SET`);
-  const [collations] =
-    await sqlSession.query<RowDataPacket[]>(`SHOW COLLATION`);
-  const [engines] = await sqlSession.query<RowDataPacket[]>(`SHOW ENGINES`);
+  const [charsets] = await sqlSession.query<CharsetRow[]>(`SHOW CHARACTER SET`);
+  const [collations] = await sqlSession.query<CollationRow[]>(`SHOW COLLATION`);
+  const [engines] = await sqlSession.query<EngineRow[]>(`SHOW ENGINES`);
 
   const supportedEngines = engines
     .filter((e) => e.Support === 'YES' || e.Support === 'DEFAULT')
@@ -59,6 +65,38 @@ export const getMysqlCapabilities = async (
   };
 };
 
+export const setGroupByMode = async (
+  sqlSession: Connection,
+  legacyMode: boolean,
+) => {
+  const [rows] = await sqlSession.query<
+    (RowDataPacket & { sql_mode: string })[]
+  >('SELECT @@SESSION.sql_mode AS sql_mode');
+
+  const originalMode = rows?.[0]?.sql_mode ?? '';
+
+  if (legacyMode) {
+    await sqlSession.query(`
+      SET SESSION sql_mode =
+      REPLACE(@@SESSION.sql_mode, 'ONLY_FULL_GROUP_BY', '')
+    `);
+  } else {
+    await sqlSession.query(`
+      SET SESSION sql_mode =
+      CONCAT(@@SESSION.sql_mode, ',ONLY_FULL_GROUP_BY')
+    `);
+  }
+
+  return originalMode;
+};
+
+export const restoreGroupByMode = async (
+  sqlSession: Connection,
+  originalMode: string,
+) => {
+  await sqlSession.query('SET SESSION sql_mode = ?', [originalMode]);
+};
+
 export const getCharsets = (session: SessionData) =>
   Object.keys(session.collationsByCharset);
 
@@ -94,3 +132,16 @@ export const collationExists = ({
   collation,
 }: CollationExistsProps) =>
   session.collationsByCharset[charset]?.collations.includes(collation) ?? false;
+
+export const profileGrants: Record<UserProfile, string[]> = {
+  admin: ['ALL PRIVILEGES ON *.*'],
+
+  editor: [
+    'CREATE ON *.*',
+    'ALTER ON *.*',
+    'DROP ON *.*',
+    'CREATE VIEW ON *.*',
+  ],
+
+  readOnly: ['SELECT ON *.*'],
+};

@@ -1,3 +1,5 @@
+import { QueryLogEntry } from '>/types';
+
 export const isObjectEmpty = (obj: unknown): boolean =>
   obj !== null && typeof obj === 'object' && Object.keys(obj).length === 0;
 
@@ -161,4 +163,19 @@ export const unknownToSql = (v: unknown): string => {
   }
 
   return `'${getEscapedValue(String(v))}'`;
+};
+
+const MAX_QUERIES = 100;
+export const createQueryLogger = (max = MAX_QUERIES) => {
+  const queries: QueryLogEntry[] = [];
+
+  const push = (entry: QueryLogEntry) => {
+    queries.push(entry);
+
+    if (queries.length > max) {
+      queries.splice(0, queries.length - max);
+    }
+  };
+
+  return { queries, push };
 };

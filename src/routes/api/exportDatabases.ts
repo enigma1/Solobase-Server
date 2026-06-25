@@ -9,7 +9,7 @@ import {
   getDatabaseSchemaDetails,
   dbNameAllowedChars,
   getRealColumns,
-} from '>/services/apiHelpers';
+} from '>/services';
 import type { ExportDatabasesRequest, ExportDatabasesResponse } from '>/types';
 import { unknownToSql } from '>/services/utils';
 
@@ -89,17 +89,17 @@ export const exportDatabases = async (req: FastifyRequest, rsp: FastifyReply) =>
             //   .stream();
             const realColumns = await getRealColumns({
               sessionData: sessionData,
-              tableName,
-              dbName,
+              table: tableName,
+              database: dbName,
             });
             const columnNamesSql = realColumns
-              .map((col) => escapeId(col[0]))
+              .map((col) => escapeId(col.field))
               .join(', ');
 
             for (const row of rows) {
               const values = realColumns
                 .map((col) => {
-                  const fieldName = col[0];
+                  const fieldName = col.field;
                   return unknownToSql(row[fieldName]);
                 })
                 .join(', ');

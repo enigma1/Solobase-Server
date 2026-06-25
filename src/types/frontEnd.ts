@@ -1,6 +1,23 @@
-import { Scalar, SortExprStrList } from '@mysql/xdevapi/types';
-import { JSONObject } from 'type-plus';
-import { SqlColumns, SqlRow, CharsetMeta, StorageEngineMeta } from './mysql';
+import type { Scalar, SortExprStrList } from '@mysql/xdevapi/types';
+import type { FieldPacket, ResultSetHeader, OkPacketParams } from 'mysql2';
+import type { JSONObject } from 'type-plus';
+import type {
+  SqlColumns,
+  SqlRow,
+  CharsetMeta,
+  StorageEngineMeta,
+} from './mysql';
+import { GroupByModes } from '>/contracts';
+
+export type QueryLogEntry = {
+  sql: string;
+  params?: unknown;
+  connector: 'sql' | 'xdevapi' | 'stream';
+  startedAt: number;
+  durationMs?: number;
+};
+
+export type SqlColumnsShape = Record<string, SqlColumns>;
 
 export type ApiResponse<T> = {
   data: T;
@@ -30,8 +47,13 @@ export type DatabaseTableResponse = BasicResponse & {
 
 export type BasicRowsShape = {
   rows: SqlRow[];
-  cols: Record<string, SqlColumns>;
+  cols: SqlColumnsShape;
   columnsOrder: string[];
+};
+
+export type TableBasics = {
+  database: string;
+  table: string;
 };
 
 export type LoginRequest = {
@@ -39,9 +61,19 @@ export type LoginRequest = {
   password: string;
 };
 
+export type UserCapabilities = {
+  canGrantPrivileges: boolean;
+  canViewUsers: boolean;
+  canManageUsers: boolean;
+  canCreateDatabases: boolean;
+  canManageTables: boolean;
+  canEditData: boolean;
+};
+
 export type LoginResponse = {
   schemas: string[];
   preferences: Record<string, any>;
+  capabilities: UserCapabilities;
 };
 // export type DatabaseInfo = RowDataPacket & {
 //   name: string;
@@ -61,6 +93,32 @@ export type FetchTablesResponse = BasicRowsShape;
 export type RunQueryRequest = {
   query: string;
 };
+
+export type RunRawQueryRequest = {
+  query: string;
+  database?: string;
+  groupByMode?: GroupByModes;
+};
+
+export type ColumnInfo = {
+  name: string;
+  table?: string;
+  type?: string;
+};
+
+type ResultSetResponse = BasicResponse & {
+  mode: 'resultset';
+  rows: Scalar[][];
+  columnsOrder: string[];
+  cols: SqlColumnsShape;
+};
+
+type CommandResponse = BasicResponse & {
+  mode: 'command';
+  resultInfo: OkPacketParams | ResultSetHeader;
+};
+
+export type RunRawQueryResponse = ResultSetResponse | CommandResponse;
 
 export type SelectDatabaseRequest = {
   name: string;
@@ -145,13 +203,13 @@ export type EditedCollectionRow = {
   command?: string; // original SQL command, if applicable
 };
 
-export type UpdateRowsRequest = {
+export type UpdateDataRowsRequest = {
   dataRows: EditedRow[] | EditedCollectionRow[]; // All edited rows
   table: string; // Table being edited
   command?: string; // original SQL command
 };
 
-export type UpdateRowsResponse = number[];
+export type UpdateDataRowsResponse = number[];
 
 export type RunQueryResponse = BasicRowsShape & {
   query: string;
@@ -188,6 +246,24 @@ export type SessionRestoreResponse = {
   dbSelected: string | null;
   preferences: Record<string, any>;
 };
+
+export type UserShape = {
+  user: string;
+  host: string;
+  password: string;
+  profile?: UserProfile;
+};
+
+export type UserProfile = 'admin' | 'editor' | 'readOnly';
+export type CreateUserRequest = UserShape;
+export type CreateUserResponse = BasicResponse;
+
+export type EditUserRequest = UserShape & {
+  orgUser: string;
+  orgHost: string;
+  passwordChange?: boolean;
+};
+export type EditUserResponse = BasicResponse;
 
 export type CreateDatabaseRequest = {
   name: string;
@@ -235,9 +311,7 @@ export type DeleteTablesResponse = BasicResponse & {
   tables: string[];
 };
 
-export type TableShapeBasics = {
-  database: string;
-  table: string;
+export type TableShapeBasics = TableBasics & {
   engine?: string;
   charset?: string;
   collation?: string;
@@ -281,14 +355,33 @@ export type EditTableRequest = {
 };
 export type EditTableResponse = DatabaseTableResponse;
 
-export type GetTableDetailsRequest = {
-  database: string;
-  table: string;
-};
-
+export type GetTableDetailsRequest = TableBasics;
 export type GetTableDetailsResponse = BasicResponse &
   TableShape & {
     engine: string;
     charset: string;
     collation: string;
   };
+
+export type GetTableColumnsInfoRequest = TableBasics;
+export type GetTableColumnsInfoResponse = BasicResponse &
+  TableBasics &
+  BasicRowsShape;
+
+export type CreateDataRowsRequest = TableBasics & {
+  rows: SqlRow[];
+};
+export type CreateDataRowsResponse = BasicResponse & TableBasics;
+
+export type DeleteDataRowsRequest = TableBasics & {
+  rows: SqlRow[];
+};
+export type DeleteDataRowsResponse = BasicResponse & TableBasics;
+
+export type FetchUsersResponse = BasicResponse & BasicRowsShape;
+
+export type DeleteUsersRequest = {
+  columnsOrder: string[];
+  rows: SqlRow[];
+};
+export type DeleteUsersResponse = BasicResponse;

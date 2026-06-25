@@ -229,15 +229,6 @@ export const editTable = async (req: FastifyRequest, rsp: FastifyReply) =>
         ...tableAlterations,
       ];
 
-      console.log('All alterations', {
-        keyDrops,
-        columnDrops,
-        columnChanges,
-        columnAdds,
-        keyAdditions,
-        tableAlterations,
-      });
-
       let isUpdated = false;
       if (alterations.length > 0) {
         const [result] = await sessionData.sqlSession.query<ResultSetHeader>(
@@ -249,10 +240,9 @@ export const editTable = async (req: FastifyRequest, rsp: FastifyReply) =>
 
       // Rename table as the last operation
       if (original.table !== modified.table) {
-        const [result] = await sessionData.sqlSession.query<ResultSetHeader>(`
-          ALTER TABLE ${escapeId(db)}.${escapeId(original.table)}
-          RENAME TO ${escapeId(db)}.${escapeId(modified.table)}
-        `);
+        const sql = `ALTER TABLE ${escapeId(db)}.${escapeId(original.table)} RENAME TO ${escapeId(db)}.${escapeId(modified.table)}`;
+        const [result] =
+          await sessionData.sqlSession.query<ResultSetHeader>(sql);
         isUpdated ||= result.warningStatus === 0;
       }
       // const [result] =

@@ -3,7 +3,7 @@ import { SortExprStrList } from '@mysql/xdevapi/types';
 import { escapeId, ResultSetHeader, RowDataPacket } from 'mysql2';
 import { z } from 'zod';
 import { JSONObject } from 'type-plus';
-import { apiCallAuth, getTableInfo } from '>/services/apiHelpers';
+import { apiCallAuth, getTableInfo } from '>/services';
 import {
   getIntegers,
   isObjectEmpty,
@@ -122,11 +122,10 @@ export const fetchDataRows = async (req: FastifyRequest, rsp: FastifyReply) =>
         const paginationSql = `LIMIT ${safeLimit} OFFSET ${safeOffset}`;
         const dbQuery = `SELECT ${colNames.join(', ')} FROM ${escapeId(table)} ${paginationSql}`;
         const [sqlRows] =
-          await sessionData!.sqlSession.query<RowDataPacket[]>(dbQuery);
+          await sessionData.sqlSession.query<RowDataPacket[]>(dbQuery);
         const rows = sqlRows.map((row) => colNames.map((col) => row[col]));
         // const rowsArray = await sessionData!.xSession.sql(dbQuery).execute();
         // const rows = rowsArray.fetchAll();
-        // console.log('fetchRows Query', colNames, rows);
         // throw req.server.httpErrors.internalServerError(
         //   'Forcing error to test client handling of server errors',
         // );

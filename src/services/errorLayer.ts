@@ -1,17 +1,16 @@
 import { ZodError } from 'zod';
 
-export type XDevApiError = {
-  info: {
-    severity?: number;
-    code: number;
-    sqlState: string;
-    msg: string;
-  };
+export type MySqlError = {
+  errno: number;
+  code: string;
+  sqlState: string;
+  sqlMessage: string;
+  sql: string;
 };
 
 export type AppError =
   | { type: 'auth'; kind: 'missing' | 'invalid' }
-  | { type: 'mysql'; error: XDevApiError }
+  | { type: 'mysql'; error: MySqlError }
   | { type: 'validation'; error: ZodError }
   | { type: 'domain'; code: string; message: string }
   | { type: 'server'; code: number; message: string };
@@ -27,7 +26,7 @@ export const appErrors = {
     kind: 'invalid',
   }),
 
-  mysql: (error: XDevApiError) => ({
+  mysql: (error: MySqlError) => ({
     type: 'mysql',
     error,
   }),
@@ -49,7 +48,7 @@ export const appErrors = {
 } satisfies {
   authMissing: () => AppError;
   authInvalid: () => AppError;
-  mysql: (error: XDevApiError) => AppError;
+  mysql: (error: MySqlError) => AppError;
   validation: (error: ZodError) => AppError;
   domain: (code: string, message: string) => AppError;
   server: (code: number, message: string) => AppError;

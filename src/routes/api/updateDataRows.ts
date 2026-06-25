@@ -6,8 +6,8 @@ import { apiCallAuth, getTableInfo, getSqlString, appErrors } from '>/services';
 import type {
   SessionData,
   EditedCollectionRow,
-  UpdateRowsResponse,
-  UpdateRowsRequest,
+  UpdateDataRowsResponse,
+  UpdateDataRowsRequest,
   BasicResponse,
 } from '>/types';
 import { envConfig } from '>/config';
@@ -22,7 +22,7 @@ const updateCollections = async ({
   req,
   // session,
   schema,
-}: UpdateCollectionsProps): Promise<UpdateRowsResponse> => {
+}: UpdateCollectionsProps): Promise<UpdateDataRowsResponse> => {
   const { table, dataRows } = req.body as {
     table: string;
     dataRows: EditedCollectionRow[];
@@ -44,12 +44,12 @@ const updateCollections = async ({
   // Implementation for updating non-SQL rows
 };
 
-export const updateRows = async (req: FastifyRequest, rsp: FastifyReply) =>
+export const updateDataRows = async (req: FastifyRequest, rsp: FastifyReply) =>
   apiCallAuth({
     req,
     rsp,
-    fn: async (sessionData): Promise<UpdateRowsResponse> => {
-      const { table, dataRows, command } = req.body as UpdateRowsRequest;
+    fn: async (sessionData): Promise<UpdateDataRowsResponse> => {
+      const { table, dataRows, command } = req.body as UpdateDataRowsRequest;
       const schema = sessionData.dbSelected
         ? sessionData.xSession.getSchema(sessionData.dbSelected)
         : null;

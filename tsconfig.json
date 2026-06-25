@@ -16,7 +16,8 @@
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
     "resolveJsonModule": true,
-    "noEmit": true
+    "noEmit": true,
+    "types": ["node"]
   },
   "include": ["src/**/*", "*.ts", "*.js"],
   "exclude": ["node_modules", "dist", "build", "tmp"]

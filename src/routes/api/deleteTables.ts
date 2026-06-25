@@ -16,7 +16,7 @@ export const deleteTables = async (req: FastifyRequest, rsp: FastifyReply) =>
     fn: async (sessionData): Promise<DeleteTablesResponse> => {
       const request = DeleteTablesSchema.parse(req.body);
       const { tables, database } = request;
-      throw appErrors.domain('delete_tables', `Table Delete Test`);
+      // throw appErrors.domain('delete_tables', `Table Delete Test`);
 
       const deletedTables = await Promise.all(
         tables.map(async (table) => {
@@ -26,15 +26,14 @@ export const deleteTables = async (req: FastifyRequest, rsp: FastifyReply) =>
         }),
       );
 
-      // await sessionData!.sqlSession.query('SHOW DATABASES');
       const ok = deletedTables.length === tables.length;
       return {
         ok,
         database,
         tables: deletedTables,
         message: ok
-          ? `Tables successfully removed from ${database}`
-          : `Table removal was incomplete in ${database}`,
+          ? `Tables successfully removed from database ${database}`
+          : `Table removal was incomplete in database ${database}`,
       };
     },
   });

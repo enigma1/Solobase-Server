@@ -1,5 +1,5 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { apiCallUnknown, getSessionFromRequest } from '>/services/apiHelpers';
+import { apiCallUnknown, getSessionFromRequest } from '>/services';
 import type {
   ApiResponse,
   SessionRestoreResponse,

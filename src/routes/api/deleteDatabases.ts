@@ -2,12 +2,8 @@ import { escapeId, ResultSetHeader } from 'mysql2';
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { dbSession } from '>/db/session';
-import { apiCallAuth, dbNameAllowedChars } from '>/services/apiHelpers';
-import type {
-  SessionData,
-  DeleteDatabasesResponse,
-  ApiResponse,
-} from '>/types';
+import { apiCallAuth } from '>/services';
+import type { DeleteDatabasesResponse, ApiResponse } from '>/types';
 
 const DeleteDatabasesSchema = z.object({
   names: z.array(z.string().trim().min(1).max(64)),
@@ -24,7 +20,7 @@ export const deleteDatabases = async (req: FastifyRequest, rsp: FastifyReply) =>
       const deletedDbNames = await Promise.all(
         dbNames.map(async (db) => {
           const dbQuery = `DROP DATABASE IF EXISTS ${escapeId(db)}`;
-          await sessionData!.sqlSession.query<ResultSetHeader>(dbQuery);
+          await sessionData.sqlSession.query<ResultSetHeader>(dbQuery);
           return db;
         }),
       );

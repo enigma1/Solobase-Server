@@ -1,7 +1,7 @@
 {
-  "name": "dbManager-back",
-  "description": "CustomDatabase manager JS/ModeJS/Fastify/MySQL backend",
-  "version": "0.0.2",
+  "name": "Solobase-Server",
+  "description": "CustomDatabase manager JS/NodeJS/Fastify/MySQL backend",
+  "version": "0.0.11",
   "author": "Mark Samios",
   "license": "GPL-3.0",
   "keywords": [
@@ -9,7 +9,9 @@
     "manager",
     "mysql",
     "fastify",
-    "nodejs"
+    "xdevapi",
+    "nodejs",
+    "admin"
   ],
   "type": "module",
   "dependencies": {

@@ -31,12 +31,27 @@ export const TableShapeKeySchema = z.object({
     .optional(),
 });
 
-export const CommonTableSchema = z.object({
+export const baseTableSchema = {
   database: z.string().trim().min(1).max(64),
   table: z.string().trim().min(1).max(64),
+};
+
+export const CommonBaseTableSchema = z.object(baseTableSchema);
+export const CommonTableSchema = z.object({
+  ...baseTableSchema,
   engine: z.string().trim().min(1).max(64).optional(),
   charset: z.preprocess(emptyToUndefined, z.string().optional()),
   collation: z.preprocess(emptyToUndefined, z.string().optional()),
   cols: z.array(TableShapeColumnSchema).min(1),
   keys: z.array(TableShapeKeySchema),
 });
+
+export const ScalarSchema = z.union([
+  z.string(),
+  z.number(),
+  z.boolean(),
+  z.null(),
+  z.record(z.string(), z.any()),
+]);
+
+export const UserProfileSchema = z.enum(['admin', 'editor', 'readOnly']);

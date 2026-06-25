@@ -1,4 +1,5 @@
 import { escape, escapeId } from 'mysql2';
+import { appErrors } from './errorLayer';
 import { TableShapeColumn, TableShapeKey } from '>/types';
 
 const buildColumnType = (col: TableShapeColumn): string => {
@@ -123,18 +124,37 @@ export const buildColumnDefinition = (col: TableShapeColumn) => {
   return parts.join(' ');
 };
 
-export const buildKeyDefinition = (key: TableShapeKey) => {
-  const cols = key.columns.map((c) => escapeId(c)).join(', ');
-
+const generateKeyName = (key: TableShapeKey) => {
   switch (key.type) {
-    case 'PRIMARY':
-      return `PRIMARY KEY (${cols})`;
+    case 'INDEX':
+      return `idx_${key.columns.join('_')}`;
 
     case 'UNIQUE':
-      return `UNIQUE KEY ${escapeId(key.name!)} (${cols})`;
+      return `uni_${key.columns.join('_')}`;
 
-    case 'INDEX':
-      return `KEY ${escapeId(key.name!)} (${cols})`;
+    case 'FOREIGN':
+      return `frn_${key.columns.join('_')}`;
+
+    default:
+      return '';
+  }
+};
+
+export const buildKeyDefinition = (key: TableShapeKey) => {
+  const cols = key.columns.map((c) => escapeId(c)).join(', ');
+  if (key.type === 'PRIMARY') return `PRIMARY KEY (${cols})`;
+
+  const name = key.name?.trim();
+  const autoNamed = name && name.length > 0 ? name : generateKeyName(key);
+
+  switch (key.type) {
+    case 'UNIQUE': {
+      return `UNIQUE KEY ${escapeId(autoNamed)} (${cols})`;
+    }
+
+    case 'INDEX': {
+      return `KEY ${escapeId(autoNamed)} (${cols})`;
+    }
 
     case 'FOREIGN': {
       const refCols = key
@@ -142,7 +162,7 @@ export const buildKeyDefinition = (key: TableShapeKey) => {
         .join(', ');
 
       return [
-        `CONSTRAINT ${escapeId(key.name!)}`,
+        `CONSTRAINT ${escapeId(autoNamed)}`,
         `FOREIGN KEY (${cols})`,
         `REFERENCES ${escapeId(key.references!.table)}`,
         `(${refCols})`,

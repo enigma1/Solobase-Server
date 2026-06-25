@@ -1,6 +1,6 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
-import { apiCallUnknown } from '>/services/apiHelpers';
+import { apiCallAuth, apiCallUnknown, getCapabilities } from '>/services';
 import { dbSession } from '>/db';
 import type {
   LoginRequest,
@@ -10,11 +10,11 @@ import type {
 } from '>/types';
 
 export const logout = async (req: FastifyRequest, rsp: FastifyReply) =>
-  apiCallUnknown({
+  apiCallAuth({
     req,
     rsp,
     fn: async (): Promise<ApiResponse<BasicResponse>> => {
-      const sessionId = req.cookies?.sessionId;
+      const sessionId = req.cookies.sessionId;
       if (!sessionId)
         return {
           data: {
@@ -49,10 +49,12 @@ export const login = async (req: FastifyRequest, rsp: FastifyReply) =>
       const request = LoginSchema.parse(req.body);
       const sessionData = await dbSession.create(request);
       dbSession.set(sessionData.sessionId, sessionData);
+      const capabilities = await getCapabilities(sessionData);
       return {
         data: {
           schemas: sessionData.schemas.map((db) => db.getName()),
           preferences: sessionData.preferences || {},
+          capabilities,
         },
         effects: {
           sessionId: sessionData.sessionId,

@@ -1,7 +1,7 @@
 import { ExprOrLiteral } from '@mysql/xdevapi';
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
-import { apiCallAuth, withAppSession } from '>/services/apiHelpers';
+import { apiCallAuth, withAppSession } from '>/services';
 import { dbSession } from '>/db';
 import type { PrimeObject, BasicResponse, ApiResponse } from '>/types';
 

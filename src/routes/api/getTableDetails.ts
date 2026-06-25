@@ -1,18 +1,12 @@
 import { v4 as uuidv4 } from 'uuid';
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { SqlResult } from '@mysql/xdevapi';
-import { z } from 'zod';
 import {
-  apiCall,
   apiCallAuth,
-  dbNameAllowedChars,
-  appErrors,
+  CommonBaseTableSchema,
+  parseColumnType,
 } from '>/services';
-import { getSqlString, indexBy } from '>/services/utils';
 import type {
-  SessionData,
-  SqlColumns,
-  BasicRowsShape,
   GetTableDetailsRequest,
   GetTableDetailsResponse,
   TableShapeColumn,
@@ -22,20 +16,15 @@ import type {
   ForeignRow,
 } from '>/types';
 
-const GetTableDetailsSchema = z.object({
-  database: z.string().trim().min(1).max(64),
-  table: z.string().trim().min(1).max(64),
-});
-
 export const getTableDetails = async (req: FastifyRequest, rsp: FastifyReply) =>
   apiCallAuth({
     req,
     rsp,
     fn: async (sessionData): Promise<GetTableDetailsResponse> => {
-      const request = GetTableDetailsSchema.parse(req.body);
+      const request = CommonBaseTableSchema.parse(req.body);
       const { database, table } = request;
 
-      const { xSession } = sessionData as SessionData;
+      const { xSession } = sessionData;
       // Update selected database in the session
       // const tables = await xSession.getSchema(dbSafeName).getTables();
       const basicSql = `SELECT * FROM information_schema.tables WHERE table_schema = ? and table_name = ?`;
@@ -70,15 +59,24 @@ export const getTableDetails = async (req: FastifyRequest, rsp: FastifyReply) =>
       const keysRows = fetchRows(keysQueryResult) as KeysRow[];
       const foreignRows = fetchRows(foreignKeysQueryResult) as ForeignRow[];
 
-      const cols: TableShapeColumn[] = colsRows.map((col: any) => ({
-        field: col.COLUMN_NAME,
-        type: col.COLUMN_TYPE,
-        nullable: col.IS_NULLABLE === 'YES',
-        defaultValue: col.COLUMN_DEFAULT ?? null,
-        autoIncrement: col.EXTRA?.includes('auto_increment') ?? false,
-        unsigned: col.COLUMN_TYPE.includes('unsigned'),
-        comment: col.COLUMN_COMMENT,
-      }));
+      const cols = colsRows.map((col: ColumnsRow): TableShapeColumn => {
+        const parsed = parseColumnType(col.COLUMN_TYPE);
+        const defaultValue =
+          col.COLUMN_DEFAULT === null && col.IS_NULLABLE === 'NO'
+            ? undefined
+            : col.COLUMN_DEFAULT;
+
+        return {
+          field: col.COLUMN_NAME,
+          type: parsed.type,
+          params: parsed.params,
+          nullable: col.IS_NULLABLE === 'YES',
+          defaultValue,
+          autoIncrement: col.EXTRA?.includes('auto_increment') ?? false,
+          unsigned: col.COLUMN_TYPE.includes('unsigned'),
+          comment: col.COLUMN_COMMENT,
+        };
+      });
 
       // Group Keys
       const keyMap = new Map<string, any[]>();
@@ -136,18 +134,21 @@ export const getTableDetails = async (req: FastifyRequest, rsp: FastifyReply) =>
         signature: uuidv4(),
       }));
 
+      const charset = Object.entries(sessionData.collationsByCharset).find(
+        ([_, meta]) => meta.collations.includes(basicRow.TABLE_COLLATION),
+      )?.[0];
+
       const result = {
         ok: true,
         message: `Information retrieved for ${database} -> ${table}`,
         database,
         table,
         engine: basicRow.ENGINE,
-        charset: basicRow.TABLE_CHARSET,
+        charset: charset ?? '',
         collation: basicRow.TABLE_COLLATION,
         cols: signedCols,
         keys: signedKeys,
       };
-      // console.log('output ---------> ', result);
       return result;
     },
   });

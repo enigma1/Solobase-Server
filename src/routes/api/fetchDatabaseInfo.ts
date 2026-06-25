@@ -1,6 +1,6 @@
 import { RowDataPacket } from 'mysql2';
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { apiCallAuth, getDatabaseServerDefaults } from '>/services/apiHelpers';
+import { apiCallAuth, getDatabaseServerDefaults } from '>/services';
 import type { FetchDatabaseInfoResponse, CharsetMeta } from '>/types';
 
 export const fetchDatabaseInfo = async (

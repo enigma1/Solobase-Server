@@ -1,7 +1,6 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { apiCallAuth } from '>/services/apiHelpers';
+import { apiCallAuth, indexBy, getRealColumns } from '>/services';
 import { SessionData, SqlColumns, FetchDatabasesResponse } from '>/types';
-import { indexBy } from '>/services/utils';
 
 export const fetchDatabasesCommon = async (sessionData: SessionData) => {
   const queryResult = await sessionData.xSession
