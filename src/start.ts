@@ -24,7 +24,7 @@ async function startServer() {
 
 // Global error handlers
 server.server.on('error', (error) => {
-  console.error('SERVERSERVER error:', error);
+  console.error('Global Server error:', error);
 });
 
 server.setErrorHandler((error, req, reply) => {

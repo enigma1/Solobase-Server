@@ -6,11 +6,9 @@ import {
   getCapabilities,
   UserProfileSchema,
   profileGrants,
+  emptyToUndefined,
 } from '>/services';
 import type { CreateUserResponse, CreateUserRequest } from '>/types';
-
-const emptyToUndefined = (v: unknown) =>
-  typeof v === 'string' && v.trim() === '' ? undefined : v;
 
 const CreateUserSchema = z.object({
   user: z.string().trim().min(2).max(64),

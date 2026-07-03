@@ -22,7 +22,7 @@ const updateCollections = async ({
   req,
   // session,
   schema,
-}: UpdateCollectionsProps): Promise<UpdateDataRowsResponse> => {
+}: UpdateCollectionsProps) => {
   const { table, dataRows } = req.body as {
     table: string;
     dataRows: EditedCollectionRow[];
@@ -49,7 +49,8 @@ export const updateDataRows = async (req: FastifyRequest, rsp: FastifyReply) =>
     req,
     rsp,
     fn: async (sessionData): Promise<UpdateDataRowsResponse> => {
-      const { table, dataRows, command } = req.body as UpdateDataRowsRequest;
+      const { table, dataRows, command, database } =
+        req.body as UpdateDataRowsRequest;
       const schema = sessionData.dbSelected
         ? sessionData.xSession.getSchema(sessionData.dbSelected)
         : null;
@@ -62,10 +63,16 @@ export const updateDataRows = async (req: FastifyRequest, rsp: FastifyReply) =>
       }
       const { tableType, cols: colsArray } = tableInfo;
       if (tableType === 'collection') {
-        return await updateCollections({
+        const cRows = await updateCollections({
           req,
           schema,
         });
+        return {
+          ok: cRows.length > 0,
+          database,
+          table,
+          message: `Rows updated successfully`,
+        };
       }
       // SQL Rows
       const colNames = colsArray.map((c) => c.field);
@@ -104,6 +111,11 @@ export const updateDataRows = async (req: FastifyRequest, rsp: FastifyReply) =>
       );
       // Execute updates in a transaction
       const affectedRows = affectedRowsInt64.map((n) => Number(n));
-      return affectedRows;
+      return {
+        ok: affectedRows.length > 0,
+        database,
+        table,
+        message: `Rows updated successfully`,
+      };
     },
   });

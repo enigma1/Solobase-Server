@@ -2,9 +2,9 @@ import fs from 'fs';
 
 export const envConfig = {
   ssl: {
-    key: fs.readFileSync('../../websites/rootCA.key'),
-    cert: fs.readFileSync('../../websites/rootCA.pem'),
-    passphrase: 'password',
+    key: fs.readFileSync('../../websites/server.key'),
+    cert: fs.readFileSync('../../websites/server.crt'),
+    // passphrase: 'password',
   },
   port: 5000,
   host: '127.0.0.1',
@@ -42,6 +42,7 @@ export const envConfig = {
 };
 
 export const fastifyConfig = {
+  bodyLimit: 10 * 1024 * 1024, // 50MB
   routerOptions: {
     ignoreTrailingSlash: true,
   },

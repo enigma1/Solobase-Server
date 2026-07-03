@@ -46,7 +46,7 @@ const create = async (body: LoginRequest): Promise<SessionData> => {
     password: body.password,
     database: undefined,
     dateStrings: true,
-    multipleStatements: false,
+    multipleStatements: true,
   });
 
   // For streamed connection use a separate one
@@ -57,7 +57,7 @@ const create = async (body: LoginRequest): Promise<SessionData> => {
     password: body.password,
     database: undefined,
     dateStrings: true,
-    multipleStatements: false,
+    multipleStatements: true,
   });
 
   const logger = createQueryLogger();
@@ -141,7 +141,7 @@ const activate = async (sessionData: SessionData, dbName?: string) => {
 
   await sessionData.sqlSession.query(`USE ${escapeId(db)}`);
   await sessionData.xSession.sql(`USE ${escapeId(db)}`).execute();
-  sessionData.streamSession.query(`USE ${escapeId(db)}`);
+  void sessionData.streamSession.query(`USE ${escapeId(db)}`);
   sessionData.dbSelected = db;
   return true;
 };

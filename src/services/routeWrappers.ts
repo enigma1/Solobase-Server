@@ -9,19 +9,19 @@ import {
 import { appClient, dbSession, sessionStore } from '>/db';
 import { envConfig, limitsConfig } from '>/config';
 import { ApiResponse, SessionData } from '>/types';
-import { getCurrentTimestamp } from '>/services';
+import { getCurrentTimestamp, appErrors } from '>/services';
 
 export const processOrThrowSession = (req: FastifyRequest): SessionData => {
   const sessionId = req.cookies?.sessionId;
 
   if (!sessionId) {
-    const error = Object.assign(new Error('Login required'), {
-      type: 'auth',
-      status: 'SESSION_MISSING',
-      code: 401,
-    });
-    throw error;
-    // throw req.server.httpErrors.unauthorized('Login required');
+    throw appErrors.authMissing();
+    // const error = Object.assign(new Error('Login required'), {
+    //   type: 'auth',
+    //   status: 'SESSION_MISSING',
+    //   code: 401,
+    // });
+    // throw error;
   }
   return dbSession.get(sessionId);
 };
@@ -35,10 +35,15 @@ export const getCookieOptions = (maxAge: number): CookieSerializeOptions => ({
   domain: envConfig.front.client,
 });
 
+type HandleApiFnArgs = {
+  req: FastifyRequest;
+  rsp: FastifyReply;
+  mode?: 'json' | 'stream';
+};
 const handleApiFn = async <T>(
   fn: () => Promise<T>,
-  { req, rsp }: { req: FastifyRequest; rsp: FastifyReply },
-): Promise<T> => {
+  { req, rsp, mode = 'json' }: HandleApiFnArgs,
+): Promise<T | undefined> => {
   try {
     const sessionId = req.cookies?.sessionId;
     const sessionData = sessionId ? sessionStore.get(sessionId) : undefined;
@@ -47,6 +52,7 @@ const handleApiFn = async <T>(
     }
 
     const result = await fn();
+    if (mode === 'stream') return;
 
     return {
       ...result,
@@ -62,11 +68,10 @@ const handleApiFn = async <T>(
         const sessionId = req?.cookies?.sessionId;
 
         if (sessionId) {
-          dbSession.remove(sessionId);
+          await dbSession.remove(sessionId);
         }
 
         rsp.setCookie('sessionId', '', getCookieOptions(0));
-
         result = rsp.status(401).send({
           error:
             error.kind === 'missing' ? 'Login required' : 'Invalid session',
@@ -90,12 +95,12 @@ const handleApiFn = async <T>(
         result = rsp.status(400).send({
           error: 'Invalid request',
           code: 400,
-          message: treeifyError(error.error),
+          message: 'Validation failed - see details',
+          details: treeifyError(error.error),
         });
         break;
 
       case 'mysql':
-        console.log(error.error);
         result = rsp.status(400).send({
           error: `${error.error.sqlState}: ${error.error.sqlMessage}`,
           code: error.error.code,
@@ -119,10 +124,11 @@ const handleApiFn = async <T>(
         });
         break;
     }
-    return {
-      ...result,
-      route: req.url,
-    };
+    return;
+    // return {
+    //   ...result,
+    //   route: req.url,
+    // };
   }
 };
 
@@ -184,6 +190,7 @@ export const apiCallUnknown = async <T>({
   handleApiFn(
     async () => {
       const res = await fn();
+
       if (hasObjectProps(res, ['effects', ['sessionId']])) {
         const sessionId = res.effects?.sessionId;
         if (typeof sessionId === 'string' && sessionId.length > 20) {
@@ -243,80 +250,79 @@ export const apiCallStream = async <T>({ req, rsp, fn }: ApiCallStreamProps) =>
       );
 
       const res = await fn(sessionData);
-      const headers = res?.effects?.headers;
-      if (headers !== undefined) {
-        for (const [key, value] of Object.entries(headers)) {
-          rsp.header(key, value);
-        }
-      }
-      const status = res?.effects?.status;
-      if (status !== undefined) {
-        rsp.status(status);
-      }
+      // const headers = res?.effects?.headers;
+      // if (headers !== undefined) {
+      //   for (const [key, value] of Object.entries(headers)) {
+      //     rsp.header(key, value);
+      //   }
+      // }
+      // const status = res?.effects?.status;
+      // if (status !== undefined) {
+      //   rsp.status(status);
+      // }
     },
-    { req, rsp },
+    { req, rsp, mode: 'stream' },
   );
 
-type ApiCallOptions = {
-  allowAnonymous?: boolean;
-  setCookie?: (reply: FastifyReply, sessionId: string) => void;
-};
+// type ApiCallOptions = {
+//   allowAnonymous?: boolean;
+//   setCookie?: (reply: FastifyReply, sessionId: string) => void;
+// };
 
-type ApiResult<T> = T & {
-  sessionId?: string;
-};
+// type ApiResult<T> = T & {
+//   sessionId?: string;
+// };
 
-type ApiCallArgs<T> = {
-  req: FastifyRequest;
-  rsp: FastifyReply;
-  // fn: (sessionData: SessionData | undefined) => Promise<T>;
-  fn: (sessionData: SessionData | undefined) => Promise<ApiResult<T>>;
-  options?: ApiCallOptions;
-};
+// type ApiCallArgs<T> = {
+//   req: FastifyRequest;
+//   rsp: FastifyReply;
+//   // fn: (sessionData: SessionData | undefined) => Promise<T>;
+//   fn: (sessionData: SessionData | undefined) => Promise<ApiResult<T>>;
+//   options?: ApiCallOptions;
+// };
+// export const apiCall = async <T>({
+//   req,
+//   rsp,
+//   fn,
+//   options = {},
+// }: ApiCallArgs<T>): Promise<T> =>
+//   handleApiFn(
+//     async () => {
+//       const { allowAnonymous = false, setCookie } = options;
+//       // Extract sessionId from cookie
+//       let sessionData: SessionData | undefined;
+//       // let sessionId = req?.cookies?.sessionId;
+//       if (!allowAnonymous) {
+//         // sessionData = dbSession.get(sessionId); // throws if invalid
+//         sessionData = processOrThrowSession(req);
+//       }
 
-export const apiCall = async <T>({
-  req,
-  rsp,
-  fn,
-  options = {},
-}: ApiCallArgs<T>): Promise<T> =>
-  handleApiFn(
-    async () => {
-      const { allowAnonymous = false, setCookie } = options;
-      // Extract sessionId from cookie
-      let sessionData: SessionData | undefined;
-      // let sessionId = req?.cookies?.sessionId;
-      if (!allowAnonymous) {
-        // sessionData = dbSession.get(sessionId); // throws if invalid
-        sessionData = processOrThrowSession(req);
-      }
+//       // Keep sqlSession alive
+//       if (sessionData) {
+//         sessionData.lastSqlActivity = getCurrentTimestamp();
+//       }
 
-      // Keep sqlSession alive
-      if (sessionData) {
-        sessionData.lastSqlActivity = getCurrentTimestamp();
-      }
+//       const fnResult = await fn(sessionData);
 
-      const fnResult = await fn(sessionData);
-
-      // Assign sessionId if not already set and result has a string sessionId
-      const hasSessionId = isObjectWithStringProperty(fnResult, 'sessionId');
-      const canSendCookie = setCookie;
-      if (!hasSessionId) {
-        // clear the cookie
-        if (canSendCookie) {
-          rsp.setCookie('sessionId', '', getCookieOptions(0));
-        }
-        return fnResult;
-      } else if (canSendCookie) {
-        rsp.setCookie(
-          'sessionId',
-          fnResult.sessionId,
-          getCookieOptions(envConfig.cookieTimeout),
-        );
-        setCookie(rsp, fnResult.sessionId);
-      }
-      const { sessionId: removed, ...result } = fnResult;
-      return result as T;
-    },
-    { req, rsp },
-  );
+//       // Assign sessionId if not already set and result has a string sessionId
+//       const hasSessionId = isObjectWithStringProperty(fnResult, 'sessionId');
+//       const canSendCookie = setCookie;
+//       if (!hasSessionId) {
+//         // clear the cookie
+//         if (canSendCookie) {
+//           rsp.setCookie('sessionId', '', getCookieOptions(0));
+//         }
+//         return fnResult;
+//       } else if (canSendCookie) {
+//         rsp.setCookie(
+//           'sessionId',
+//           fnResult.sessionId,
+//           getCookieOptions(envConfig.cookieTimeout),
+//         );
+//         setCookie(rsp, fnResult.sessionId);
+//       }
+//       const { sessionId: removed, ...result } = fnResult;
+//       return result as T;
+//     },
+//     { req, rsp },
+//   );

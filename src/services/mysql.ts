@@ -65,37 +65,63 @@ export const getMysqlCapabilities = async (
   };
 };
 
-export const setGroupByMode = async (
-  sqlSession: Connection,
-  legacyMode: boolean,
-) => {
+type SessionModeProps = {
+  sqlSession: Connection;
+  modes?: string[];
+  data: any;
+};
+export const compatibleQueryExecution = async ({
+  sqlSession,
+  modes,
+  data,
+}: SessionModeProps) => {
+  if (!modes || modes.length === 0) {
+    return await sqlSession.query(data);
+  }
   const [rows] = await sqlSession.query<
     (RowDataPacket & { sql_mode: string })[]
   >('SELECT @@SESSION.sql_mode AS sql_mode');
-
   const originalMode = rows?.[0]?.sql_mode ?? '';
-
-  if (legacyMode) {
-    await sqlSession.query(`
-      SET SESSION sql_mode =
-      REPLACE(@@SESSION.sql_mode, 'ONLY_FULL_GROUP_BY', '')
-    `);
-  } else {
-    await sqlSession.query(`
-      SET SESSION sql_mode =
-      CONCAT(@@SESSION.sql_mode, ',ONLY_FULL_GROUP_BY')
-    `);
+  try {
+    const sql = modes.join(',');
+    await sqlSession.query('SET SESSION sql_mode = ?', [sql]);
+    return await sqlSession.query(data);
+  } finally {
+    await sqlSession.query('SET SESSION sql_mode = ?', [originalMode]);
   }
-
-  return originalMode;
 };
 
-export const restoreGroupByMode = async (
-  sqlSession: Connection,
-  originalMode: string,
-) => {
-  await sqlSession.query('SET SESSION sql_mode = ?', [originalMode]);
-};
+// export const setGroupByMode = async (
+//   sqlSession: Connection,
+//   legacyMode: boolean,
+// ) => {
+//   const [rows] = await sqlSession.query<
+//     (RowDataPacket & { sql_mode: string })[]
+//   >('SELECT @@SESSION.sql_mode AS sql_mode');
+
+//   const originalMode = rows?.[0]?.sql_mode ?? '';
+
+//   if (legacyMode) {
+//     await sqlSession.query(`
+//       SET SESSION sql_mode =
+//       REPLACE(@@SESSION.sql_mode, 'ONLY_FULL_GROUP_BY', '')
+//     `);
+//   } else {
+//     await sqlSession.query(`
+//       SET SESSION sql_mode =
+//       CONCAT(@@SESSION.sql_mode, ',ONLY_FULL_GROUP_BY')
+//     `);
+//   }
+
+//   return originalMode;
+// };
+
+// export const restoreGroupByMode = async (
+//   sqlSession: Connection,
+//   originalMode: string,
+// ) => {
+//   await sqlSession.query('SET SESSION sql_mode = ?', [originalMode]);
+// };
 
 export const getCharsets = (session: SessionData) =>
   Object.keys(session.collationsByCharset);

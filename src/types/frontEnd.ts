@@ -124,6 +124,10 @@ export type SelectDatabaseRequest = {
   name: string;
 };
 
+export type SelectDatabaseResponse = BasicResponse & {
+  database?: string;
+};
+
 export type FetchRowsRequest = {
   table: string;
   offset?: number;
@@ -205,11 +209,15 @@ export type EditedCollectionRow = {
 
 export type UpdateDataRowsRequest = {
   dataRows: EditedRow[] | EditedCollectionRow[]; // All edited rows
-  table: string; // Table being edited
   command?: string; // original SQL command
+  table: string;
+  database: string;
 };
 
-export type UpdateDataRowsResponse = number[];
+export type UpdateDataRowsResponse = BasicResponse & {
+  table: string;
+  database: string;
+};
 
 export type RunQueryResponse = BasicRowsShape & {
   query: string;
@@ -385,3 +393,11 @@ export type DeleteUsersRequest = {
   rows: SqlRow[];
 };
 export type DeleteUsersResponse = BasicResponse;
+
+export type ImportDataRequest = {
+  database?: string;
+  data: string;
+  groupByMode?: GroupByModes;
+};
+
+export type ImportDataResponse = BasicResponse;

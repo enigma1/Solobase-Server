@@ -1,3 +1,4 @@
+import { escape } from 'mysql2';
 import { QueryLogEntry } from '>/types';
 
 export const isObjectEmpty = (obj: unknown): boolean =>
@@ -56,19 +57,18 @@ export const getSqlString = (input: string): string =>
 export const getEscapedValue = (v: unknown): string => {
   if (v === null || v === undefined) return 'NULL';
 
-  if (typeof v === 'number') {
-    return String(v);
+  if (typeof v === 'number' || typeof v === 'bigint') return String(v);
+  if (typeof v === 'boolean') return v ? '1' : '0';
+
+  if (v instanceof Date) {
+    return escape(v.toISOString().slice(0, 19).replace('T', ' '));
   }
 
-  if (typeof v === 'boolean') {
-    return v ? '1' : '0';
+  if (Buffer.isBuffer(v)) {
+    return `X'${v.toString('hex')}'`;
   }
 
-  return `'${String(v)
-    .replace(/\\/g, '\\\\')
-    .replace(/'/g, "\\'")
-    .replace(/\n/g, '\\n')
-    .replace(/\r/g, '\\r')}'`;
+  return escape(String(v));
 };
 
 export const getIntegers = (input: unknown[], defaults: number[]): number[] => {
@@ -138,17 +138,9 @@ export const getCurrentTimestamp = (units?: 'secs' | 'hours' | 'days') => {
 };
 
 export const unknownToSql = (v: unknown): string => {
-  if (v === null || v === undefined) {
-    return 'NULL';
-  }
-
-  if (typeof v === 'boolean') {
-    return v ? '1' : '0';
-  }
-
-  if (typeof v === 'number' || typeof v === 'bigint') {
-    return String(v);
-  }
+  if (v === null || v === undefined) return 'NULL';
+  if (typeof v === 'number' || typeof v === 'bigint') return String(v);
+  if (typeof v === 'boolean') return v ? '1' : '0';
 
   if (v instanceof Date) {
     return `'${v.toISOString().slice(0, 19).replace('T', ' ')}'`;
@@ -159,10 +151,14 @@ export const unknownToSql = (v: unknown): string => {
   }
 
   if (typeof v === 'object') {
-    return `'${getEscapedValue(JSON.stringify(v))}'`;
+    return `'${JSON.stringify(v).replace(/'/g, "''")}'`;
   }
 
-  return `'${getEscapedValue(String(v))}'`;
+  // STRING CASE (THIS IS THE IMPORTANT PART)
+  const s = String(v);
+
+  // normalize all quote styles first
+  return `'${s.replace(/\\/g, '\\\\').replace(/'/g, "''")}'`;
 };
 
 const MAX_QUERIES = 100;

@@ -3,7 +3,7 @@ import mysqlStream from 'mysql2';
 import mysqlx from '@mysql/xdevapi';
 import { QueryLogEntry } from '>/types';
 
-const MAX_QUERY_LENGTH = 1024;
+const MAX_QUERY_LENGTH = 2048;
 type SqlInterceptorProps = {
   sqlSession: PromiseConnection;
   push: (logEntry: QueryLogEntry) => void;
@@ -19,15 +19,19 @@ export const sqlSessionInterceptor = ({
       if (prop === 'query' && typeof value === 'function') {
         return async (...args: any[]) => {
           const [sqlRaw, params] = args;
+          const sqlModed =
+            typeof sqlRaw === 'string'
+              ? sqlRaw
+              : (sqlRaw?.sql ?? sqlRaw?.query);
 
-          if (typeof sqlRaw === 'string') {
+          if (typeof sqlModed === 'string') {
             const start = performance.now();
             const startedAt = Date.now();
             const result = await value.apply(target, args);
             const sql =
-              sqlRaw.length > MAX_QUERY_LENGTH
-                ? `${sqlRaw.slice(0, MAX_QUERY_LENGTH)}...`
-                : sqlRaw;
+              sqlModed.length > MAX_QUERY_LENGTH
+                ? `${sqlModed.slice(0, MAX_QUERY_LENGTH)}...`
+                : sqlModed;
 
             push({
               sql,
@@ -106,12 +110,13 @@ export const streamSessionInterceptor = ({
       if (prop === 'query' && typeof value === 'function') {
         return (...args: any[]) => {
           const [sqlRaw, params] = args;
+          const sql = typeof sqlRaw === 'string' ? sqlRaw : sqlRaw?.sql;
 
           const startedAt = Date.now();
           const start = performance.now();
           const query = value.apply(target, args);
 
-          if (typeof sqlRaw === 'string') {
+          if (typeof sql === 'string') {
             const sql =
               sqlRaw.length > MAX_QUERY_LENGTH
                 ? `${sqlRaw.slice(0, MAX_QUERY_LENGTH)}...`

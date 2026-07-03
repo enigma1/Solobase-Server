@@ -6,11 +6,9 @@ import {
   collationExists,
   charsetExists,
   getDatabaseServerDefaults,
+  emptyToUndefined,
 } from '>/services';
 import type { CreateDatabaseResponse, CreateDatabaseRequest } from '>/types';
-
-const emptyToUndefined = (v: unknown) =>
-  typeof v === 'string' && v.trim() === '' ? undefined : v;
 
 const CreateDatabaseSchema = z.object({
   name: z.string().trim().min(1).max(64),

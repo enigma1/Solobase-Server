@@ -7,15 +7,13 @@ import {
   charsetExists,
   dbNameAllowedChars,
   getDatabaseServerDefaults,
+  emptyToUndefined,
 } from '>/services';
 import type {
   SessionData,
   EditDatabaseResponse,
   EditDatabaseRequest,
 } from '>/types';
-
-const emptyToUndefined = (v: unknown) =>
-  typeof v === 'string' && v.trim() === '' ? undefined : v;
 
 const EditDatabaseSchema = z.object({
   name: z.string().regex(dbNameAllowedChars, 'Invalid database name'),

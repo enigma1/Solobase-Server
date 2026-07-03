@@ -1,10 +1,11 @@
+import { escape } from 'mysql2';
 import { createGzip } from 'node:zlib';
+import { Readable } from 'node:stream';
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { escapeId, type RowDataPacket } from 'mysql2';
 import { z } from 'zod';
 import { envConfig } from '>/config';
 import {
-  apiCall,
   apiCallStream,
   getDatabaseSchemaDetails,
   dbNameAllowedChars,
@@ -64,10 +65,10 @@ export const exportDatabases = async (req: FastifyRequest, rsp: FastifyReply) =>
             await getDatabaseSchemaDetails(sessionData, dbName);
           rawQuery = `CREATE DATABASE IF NOT EXISTS ${escapedName}
               CHARACTER SET ${charset}
-              COLLATE ${collation};
+              COLLATE ${collation}
             `;
           gzip.write(`${rawQuery};\n\n`);
-
+          gzip.write(`USE ${escapedName};\n\n`);
           const [tables] = await sessionData.sqlSession.query<RowDataPacket[]>(
             `SHOW TABLES FROM ${escapedName}`,
           );
@@ -81,27 +82,49 @@ export const exportDatabases = async (req: FastifyRequest, rsp: FastifyReply) =>
             const createSql = tableDetailRows[0]['Create Table'].trimEnd();
             gzip.write(`${createSql};\n\n`);
             // Data Rows in a table
+
+            // const sql = `SELECT * FROM ${escapedName}.${escapedTable}`;
+            // const [rows] =
+            //   await sessionData.sqlSession.query<RowDataPacket[]>(sql);
+
+            // // const stream = sessionData.streamSession
+            // //   .query<RowDataPacket[]>(sql)
+            // //   .stream();
+            // const realColumns = await getRealColumns({
+            //   sessionData: sessionData,
+            //   table: tableName,
+            //   database: dbName,
+            // });
+            // const columnNamesSql = realColumns
+            //   .map((col) => escapeId(col.field))
+            //   .join(', ');
+
+            // for (const row of rows) {
+            //   const values = realColumns
+            //     .map((col) => {
+            //       const fieldName = col.field;
+            //       return unknownToSql(row[fieldName]);
+            //     })
+            //     .join(', ');
+
             const sql = `SELECT * FROM ${escapedName}.${escapedTable}`;
-            const [rows] =
-              await sessionData.sqlSession.query<RowDataPacket[]>(sql);
-            // const stream = sessionData.sqlSession
-            //   .query<RowDataPacket[]>(sql)
-            //   .stream();
+            const stream: Readable = sessionData.streamSession
+              .query(sql)
+              .stream();
+
             const realColumns = await getRealColumns({
-              sessionData: sessionData,
+              sessionData,
               table: tableName,
               database: dbName,
             });
+
             const columnNamesSql = realColumns
               .map((col) => escapeId(col.field))
               .join(', ');
 
-            for (const row of rows) {
+            for await (const row of stream) {
               const values = realColumns
-                .map((col) => {
-                  const fieldName = col.field;
-                  return unknownToSql(row[fieldName]);
-                })
+                .map((col) => escape(row[col.field]))
                 .join(', ');
 
               gzip.write(
@@ -115,9 +138,7 @@ export const exportDatabases = async (req: FastifyRequest, rsp: FastifyReply) =>
           gzip.write(
             `-- ERROR EXPORTING ${dbName}: ${(e as Error).message}\n\n`,
           );
-          // failedDbs.push(dbName);
         }
-        // sessionData?.sqlSession.escape;
       }
       gzip.write(`SET FOREIGN_KEY_CHECKS=1;\n`);
       gzip.end();

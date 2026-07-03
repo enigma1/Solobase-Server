@@ -1,7 +1,7 @@
 {
   "name": "Solobase-Server",
   "description": "CustomDatabase manager JS/NodeJS/Fastify/MySQL backend",
-  "version": "0.0.11",
+  "version": "0.0.14",
   "author": "Mark Samios",
   "license": "GPL-3.0",
   "keywords": [

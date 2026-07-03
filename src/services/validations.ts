@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-const emptyToUndefined = (v: unknown) =>
+export const emptyToUndefined = (v: unknown) =>
   typeof v === 'string' && v.trim() === '' ? undefined : v;
 
 export const TableShapeColumnSchema = z.object({

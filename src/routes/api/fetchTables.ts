@@ -1,10 +1,10 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import {
-  apiCall,
   apiCallAuth,
   dbNameAllowedChars,
   appErrors,
+  emptyToUndefined,
 } from '>/services';
 import { getSqlString, indexBy } from '>/services/utils';
 import type {
@@ -14,9 +14,6 @@ import type {
   BasicRowsShape,
   FetchTablesResponse,
 } from '>/types';
-
-const emptyToUndefined = (v: unknown) =>
-  typeof v === 'string' && v.trim() === '' ? undefined : v;
 
 const FetchTablesSchema = z.object({
   database: z.preprocess(
@@ -35,7 +32,12 @@ export const fetchTables = async (req: FastifyRequest, rsp: FastifyReply) =>
       const dbName = request.database ?? dbSelected;
       const dbSafeName = schemas.find((s) => s.getName() === dbName)?.getName();
       if (!dbSafeName) {
-        throw appErrors.server(404, 'No database found');
+        return {
+          rows: [],
+          cols: {},
+          columnsOrder: [],
+        };
+        // throw appErrors.server(404, 'No database found');
       }
       // Update selected database in the session
       sessionData.dbSelected = dbSafeName;
