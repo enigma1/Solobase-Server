@@ -1,15 +1,13 @@
 {
   "name": "Solobase-Server",
-  "description": "CustomDatabase manager JS/NodeJS/Fastify/MySQL backend",
-  "version": "0.0.14",
+  "description": "Solobase Main Backend host for MySQL Databases",
+  "version": "0.0.15",
   "author": "Mark Samios",
   "license": "GPL-3.0",
   "keywords": [
     "database",
     "manager",
     "mysql",
-    "fastify",
-    "xdevapi",
     "nodejs",
     "admin"
   ],

@@ -27,7 +27,15 @@ export const sqlSessionInterceptor = ({
           if (typeof sqlModed === 'string') {
             const start = performance.now();
             const startedAt = Date.now();
+            console.log(
+              'QUERY START------------------------->',
+              sqlModed.slice(0, 30),
+            );
             const result = await value.apply(target, args);
+            console.log(
+              'QUERY END---------------------------->',
+              sqlModed.slice(0, 30),
+            );
             const sql =
               sqlModed.length > MAX_QUERY_LENGTH
                 ? `${sqlModed.slice(0, MAX_QUERY_LENGTH)}...`

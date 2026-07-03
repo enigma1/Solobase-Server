@@ -1,4 +1,6 @@
+import { loadEnvFile } from 'node:process';
 import fs from 'fs';
+loadEnvFile();
 
 export const envConfig = {
   ssl: {

@@ -13,6 +13,7 @@ import {
   streamSessionInterceptor,
   createQueryLogger,
 } from '>/services';
+import { getEnvKey } from './appSession';
 
 export const sessionStore = new Map<string, SessionData>();
 export const sessionJanitor = () => {
@@ -48,6 +49,16 @@ const create = async (body: LoginRequest): Promise<SessionData> => {
     dateStrings: true,
     multipleStatements: true,
   });
+
+  // const sqlPool = mysql.createPool({
+  //   host: getEnvKey('DB_HOST') ?? '127.0.0.1',
+  //   port: Number(getEnvKey('DB_PORT') ?? 3306),
+  //   user: getEnvKey('DB_USER') ?? 'root',
+  //   password: getEnvKey('DB_PASSWORD'),
+  //   database: undefined,
+  //   dateStrings: true,
+  //   multipleStatements: true,
+  // });
 
   // For streamed connection use a separate one
   const streamSession = mysqlStream.createConnection({
