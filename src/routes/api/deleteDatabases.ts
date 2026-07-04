@@ -26,12 +26,12 @@ export const deleteDatabases = async (req: FastifyRequest, rsp: FastifyReply) =>
       );
 
       const wasSelectedDeleted =
-        sessionData!.dbSelected && dbNames.includes(sessionData!.dbSelected);
+        sessionData.dbSelected && dbNames.includes(sessionData!.dbSelected);
 
       if (wasSelectedDeleted) {
         await dbSession.resetDb(sessionData!);
-        sessionData!.dbSelected = null;
-        sessionData!.schemas = await sessionData!.xSession.getSchemas();
+        sessionData.dbSelected = null;
+        sessionData.schemas = await sessionData!.xSession.getSchemas();
       }
 
       // await sessionData!.sqlSession.query('SHOW DATABASES');

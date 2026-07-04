@@ -14,7 +14,6 @@ import { envConfig } from '>/config';
 
 type UpdateCollectionsProps = {
   req: FastifyRequest;
-  // session: mysqlx.Session;
   schema: mysqlx.Schema;
 };
 

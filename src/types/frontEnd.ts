@@ -84,6 +84,9 @@ export type LoginResponse = {
 //   databases: DatabaseInfo[];
 // };
 
+export type AbortSqlRequest = {};
+export type AbortSqlResponse = BasicResponse;
+
 export type FetchTablesRequest = {
   database?: string;
 };

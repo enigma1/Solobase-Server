@@ -14,6 +14,7 @@ import {
 import { appClient, dbSession } from '>/db';
 import { envConfig, limitsConfig } from '>/config';
 import {
+  XApiSession,
   MysqlUtilityProps,
   ApiResponse,
   SessionData,
@@ -294,12 +295,12 @@ export const getDatabaseServerDefaults = async (sessionData: SessionData) => {
 };
 
 const defaultCapabilities: UserCapabilities = {
-  canGrantPrivileges: true,
-  canViewUsers: true,
-  canManageUsers: true,
-  canCreateDatabases: true,
-  canManageTables: true,
-  canEditData: true,
+  canGrantPrivileges: false,
+  canViewUsers: false,
+  canManageUsers: false,
+  canCreateDatabases: false,
+  canManageTables: false,
+  canEditData: false,
 };
 
 const getGrants = async (sessionData: SessionData) => {
@@ -315,19 +316,28 @@ export const getCapabilities = async (
   const grants = await getGrants(sessionData);
   const joined = grants.join(' ');
 
-  return {
-    ...defaultCapabilities,
-    canViewUsers:
-      !joined.includes('ALL PRIVILEGES') &&
-      !joined.includes('SELECT ON `mysql`.*'),
+  const hasGrant = (text: string) =>
+    grants.some((grant) => grant.includes(text));
+  const all = joined.includes('ALL PRIVILEGES');
 
-    canGrantPrivileges:
-      !joined.includes('WITH GRANT OPTION') &&
-      !joined.includes('ALL PRIVILEGES'),
-
-    canManageUsers:
-      !joined.includes('CREATE USER') &&
-      !joined.includes('SYSTEM_USER') &&
-      !joined.includes('ALL PRIVILEGES'),
+  const privileges = {
+    canGrantPrivileges: all || hasGrant('WITH GRANT OPTION'),
+    canViewUsers: all || hasGrant('SELECT ON `mysql`.*'),
+    canManageUsers: all || hasGrant('CREATE USER') || hasGrant('SYSTEM_USER'),
+    canCreateDatabases: all || hasGrant('CREATE ON *.*'),
+    canManageTables:
+      all ||
+      hasGrant('CREATE') ||
+      hasGrant('ALTER') ||
+      hasGrant('DROP') ||
+      hasGrant('INDEX'),
+    canEditData:
+      all || hasGrant('INSERT') || hasGrant('UPDATE') || hasGrant('DELETE'),
   };
+
+  console.log(
+    'privileges-------------------------------------------------->',
+    privileges,
+  );
+  return privileges;
 };

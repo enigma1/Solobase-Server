@@ -1,6 +1,6 @@
 import { server } from '>/server';
 import { envConfig } from '>/config';
-import { sessionJanitor } from '>/db';
+import { startJanitors } from '>/db';
 // import { appClient } from '>/db/appSession';
 const { port, host } = envConfig;
 
@@ -12,7 +12,7 @@ async function startServer() {
     // await session.close();
 
     // Start garbage collector;
-    sessionJanitor();
+    startJanitors();
     // Start Fastify server
     await server.listen({ port, host });
     console.log(`Started server at https://${host}:${port}`);

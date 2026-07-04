@@ -5,6 +5,7 @@ import {
   // SqlColumnType,
 } from '>/types';
 import {
+  abortSql,
   login,
   logout,
   selectDatabase,
@@ -89,6 +90,7 @@ export const routes = async (server: FastifyInstance) => {
   });
   server.get('/api/check-session', checkSession);
   server.get('/auth/presence', presence);
+  server.get('/db/abort', abortSql);
   server.post('/auth/login', login);
   server.get('/auth/logout', logout);
   server.post('/db/select-database', selectDatabase);

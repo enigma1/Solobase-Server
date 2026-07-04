@@ -40,11 +40,14 @@ export const envConfig = {
   },
   cookieTimeout: 1000 * 3600 * 2, // 2 hours
   sqlIdleTimeout: 1000 * 3600 * 2, // ditto
-  pollingIdleTimer: 1000 * 60 * 10, // check every 10 minutes
+  pollIdleInterval: 1000 * 60 * 24, // check every 24 minutes
+
+  retiredSessionRemoval: 1000 * 60 * 5, // release after 5 minutes
+  pollRetiredSessionInterval: 1000 * 60 * 2, // check every 2 minutes
 };
 
 export const fastifyConfig = {
-  bodyLimit: 10 * 1024 * 1024, // 50MB
+  bodyLimit: 10 * 1024 * 1024, // 10MB common body request max size
   routerOptions: {
     ignoreTrailingSlash: true,
   },

@@ -40,9 +40,7 @@ export const runRawQuery = async (req: FastifyRequest, rsp: FastifyReply) =>
       }
 
       const modes =
-        groupByMode === 'legacy'
-          ? ['NO_ENGINE_SUBSTITUTION', 'ONLY_FULL_GROUP_BY']
-          : undefined;
+        groupByMode === 'legacy' ? ['NO_ENGINE_SUBSTITUTION'] : undefined;
       const response = await compatibleQueryExecution({
         sqlSession: sessionData.sqlSession,
         modes,
@@ -51,21 +49,6 @@ export const runRawQuery = async (req: FastifyRequest, rsp: FastifyReply) =>
           nestTables: true,
         },
       });
-
-      // let oldMode;
-      // if (groupByMode && groupByMode !== 'default') {
-      //   oldMode = await setGroupByMode(
-      //     sessionData.sqlSession,
-      //     groupByMode === 'legacy',
-      //   );
-      // }
-
-      // const response = await sessionData.sqlSession.query({
-      //   sql: query,
-      //   nestTables: true,
-      // });
-
-      // if (oldMode) await restoreGroupByMode(sessionData.sqlSession, oldMode);
 
       const [result, fields] = response;
       const isMulti = Array.isArray(result) && Array.isArray(result[0]);

@@ -1,5 +1,5 @@
 import type { RowDataPacket, Connection as StreamConnection } from 'mysql2';
-import type { Connection as PromiseConnection } from 'mysql2/promise';
+import type { Connection as SqlConnection } from 'mysql2/promise';
 import type {
   Session as XSession,
   Schema,
@@ -7,6 +7,8 @@ import type {
   SortExprStrList,
 } from '@mysql/xdevapi';
 import type { PrimeObject, QueryLogEntry } from '>/types/frontEnd';
+import { WorkerConnection } from './connections';
+export type XApiSession = XSession & { threadId: number };
 
 export type MySqlCaps = {
   collationsByCharset: Record<string, CharsetMeta>;
@@ -20,10 +22,14 @@ export type MySqlCaps = {
 
 export type SessionData = MySqlCaps & {
   sessionId: string; // the generated UUID
-  xSession: XSession; // the xDevApi MySQL session
-  sqlSession: PromiseConnection; // the classic MySQL session
+  xSession: XApiSession; // the xDevApi MySQL session
+  sqlSession: SqlConnection; // the classic MySQL session
   streamSession: StreamConnection; // the stream MySql session
-  // appSession: mysqlx.Session; // the app MySQL session
+  xWorker: WorkerConnection<XApiSession>;
+  sqlWorker: WorkerConnection<SqlConnection>;
+  streamWorker: WorkerConnection<StreamConnection>;
+
+  // appSession: XApiSession; // the app MySQL session
   schemas: Schema[]; // schemas available to this session
   dbSelected: string | null; // initially null
   // tableSelected: string | null;
@@ -31,6 +37,7 @@ export type SessionData = MySqlCaps & {
   preferences: PrimeObject;
   queries: QueryLogEntry[];
   lastSqlActivity: number;
+  dateMarked: number;
 };
 
 export type EngineRow = RowDataPacket & {
