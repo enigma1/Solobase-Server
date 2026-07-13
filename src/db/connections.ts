@@ -1,5 +1,6 @@
 import { createConnection as streamConnnection } from 'mysql2';
 import { createConnection as sqlConnection } from 'mysql2/promise';
+import { createPool as sqlPool } from 'mysql2/promise';
 import { getSession } from '@mysql/xdevapi';
 import { getEnvKey } from './appSession';
 import { XApiSession, PrimeObject, QueryLogEntry, SessionData } from '>/types';
@@ -60,6 +61,24 @@ export const createSqlConnection = async ({
   return sqlSessionProxy;
 };
 
+export const createSqlPoolConnection = ({
+  push,
+  username,
+  password,
+}: CreateConnectionProps) => {
+  const sqlSession = sqlPool({
+    ...getCommonSqlConnectionParams(username, password),
+    database: undefined,
+    dateStrings: true,
+    multipleStatements: true,
+  });
+  const sqlSessionProxy = sqlSessionInterceptor({
+    sqlSession,
+    push,
+  });
+  return sqlSessionProxy;
+};
+
 export const createStreamConnection = ({
   push,
   username,
@@ -78,15 +97,6 @@ export const createStreamConnection = ({
   return sqlSessionProxy;
 };
 
-// export const createControlConnection = async () => {
-//   const ctrlSession = await sqlConnection({
-//     host: getEnvKey('DB_HOST') ?? '127.0.0.1',
-//     port: Number(getEnvKey('DB_PORT') ?? 3306),
-//     user: getEnvKey('DB_USER') ?? 'root',
-//     password: getEnvKey('DB_PASSWORD'),
-//   });
-//   return ctrlSession;
-// };
 export const ctrlSession = await sqlConnection({
   host: getEnvKey('DB_HOST') ?? '127.0.0.1',
   port: Number(getEnvKey('DB_PORT') ?? 3306),

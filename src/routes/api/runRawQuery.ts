@@ -1,5 +1,4 @@
 import { RowDataPacket, ResultSetHeader, OkPacketParams } from 'mysql2';
-import { Scalar } from '@mysql/xdevapi';
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { dbSession } from '>/db/session';
@@ -15,7 +14,7 @@ import {
   // restoreGroupByMode,
 } from '>/services';
 import { GroupByModesSchema } from '>/contracts';
-import type { RunRawQueryResponse, RunRawQueryRequest } from '>/types';
+import type { SqlRow, RunRawQueryResponse, RunRawQueryRequest } from '>/types';
 
 const RunRawQuerySchema = z.object({
   query: z.string().trim().min(1),
@@ -36,7 +35,7 @@ export const runRawQuery = async (req: FastifyRequest, rsp: FastifyReply) =>
           `SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = ?`,
           [database],
         );
-        await dbSession.activate(sessionData, database);
+        await dbSession.activate({ sessionData, database });
       }
 
       const modes =
@@ -76,7 +75,7 @@ export const runRawQuery = async (req: FastifyRequest, rsp: FastifyReply) =>
       return {
         ok: true,
         mode: 'resultset',
-        rows: rows as Scalar[][],
+        rows: rows as SqlRow[],
         cols,
         columnsOrder,
         message: 'result set successfully retrieved',

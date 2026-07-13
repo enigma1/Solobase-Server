@@ -1,31 +1,47 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { SortExprStrList } from '@mysql/xdevapi/types';
-import { escapeId, ResultSetHeader, RowDataPacket } from 'mysql2';
+import { escapeId, type RowDataPacket } from 'mysql2/promise';
 import { z } from 'zod';
-import { JSONObject } from 'type-plus';
-import { apiCallAuth, getTableInfo } from '>/services';
+import { apiCallAuth, getColumnsOrdered } from '>/services';
 import {
-  getIntegers,
-  isObjectEmpty,
-  indexBy,
-  sortByAllowedChars,
   appErrors,
+  fingerprint,
+  pageSizeValues,
+  buildPaging,
 } from '>/services';
-import { envConfig, limitsConfig } from '>/config';
+import { dbSession } from '>/db';
+import {
+  hasIdentity,
+  baseSortSchema,
+  baseTableSchema,
+  basePaginationSchema,
+} from '>/services';
 import type {
-  SessionData,
   FetchRowsRequest,
   FetchRowsResponse,
-  CollectionRow,
+  SqlColumnsShape,
+  SqlRow,
+  SqlQueryRow,
 } from '>/types';
 
+type GetRowTokensProps = {
+  cols: SqlColumnsShape;
+  rows: SqlRow[];
+  offset: number;
+};
+
+const getRowTokens = ({ cols, rows, offset }: GetRowTokensProps) => {
+  if (!hasIdentity(cols)) {
+    return rows.map((row, index) => ({
+      rowIndex: offset + index,
+      fingerprint: fingerprint(row),
+    }));
+  }
+};
+
 const FetchDataRowsSchema = z.object({
-  table: z.string(),
-  limit: z.number().optional(),
-  offset: z.number().optional(),
-  sortBy: z
-    .array(z.string().regex(sortByAllowedChars, 'Invalid sortBy format'))
-    .optional(),
+  ...basePaginationSchema,
+  ...baseTableSchema,
+  ...baseSortSchema,
 });
 
 export const fetchDataRows = async (req: FastifyRequest, rsp: FastifyReply) =>
@@ -33,109 +49,51 @@ export const fetchDataRows = async (req: FastifyRequest, rsp: FastifyReply) =>
     req,
     rsp,
     fn: async (sessionData): Promise<FetchRowsResponse> => {
-      const schema = sessionData.dbSelected
-        ? sessionData.xSession.getSchema(sessionData.dbSelected)
-        : null;
-
-      if (!schema) {
-        throw appErrors.server(404, 'A Database was not selected');
-      }
-
       const request = FetchDataRowsSchema.parse(req.body);
-      const {
+      const { database, table, paging: pagination, sortBy } = request;
+      const { limit = pageSizeValues[0], offset = 0 } = pagination ?? {};
+
+      await dbSession.activate({ sessionData, database, refresh: true });
+
+      const { cols, columnsOrder } = await getColumnsOrdered({
+        sessionData,
         table,
-        limit = 100,
-        offset = 0,
-        sortBy,
-      } = request as FetchRowsRequest;
+        database,
+      });
 
-      // const tables = await schema.getTables();
-      // if (!tables.some((t) => t.getName() === table)) {
-      //   throw req.server.httpErrors.notFound('Database Table not found');
-      // }
-
-      // console.log(
-      //   'fetchRows Call',
-      //   sessionData!.dbSelected,
-      //   table,
-      //   offset,
-      //   limit,
-      // );
-
-      // .sort(['name ASC', 'age DESC'])
-      // const cTable = schema.getCollection(table); // use getCollection instead of getTable
-      // const docs = await cTable.find().limit(limit).offset(offset).execute(); // get all rows
-      // const rows = docs.fetchAll(); // array of documents
-
-      // use dbSession.activate for raw queries when db changes
-      const range = getIntegers(
-        [limit, offset],
-        [limitsConfig.maxRowsFetch, 0],
-      );
-      const [safeLimit, safeOffset] = [
-        Math.min(range[0], limitsConfig.maxRowsFetch),
-        Math.max(range[1], 0),
-      ];
-
-      const info = await getTableInfo(sessionData, table);
-      if (!info) {
+      if (!columnsOrder.length) {
         throw appErrors.server(404, 'A Database Table was not found');
       }
-      const { tableType, cols } = info;
 
-      if (tableType === 'collection') {
-        const cTable = schema.getCollection(table); // use getCollection instead of getTable
-        const find = cTable.find();
-        let cmdObj = find;
-        if (sortBy) {
-          cmdObj = find.sort(sortBy);
-        }
-        cmdObj = cmdObj.offset(safeOffset).limit(safeLimit);
-        const docs = await cmdObj.execute();
-        const rows = docs.fetchAll() as CollectionRow[];
-        const columnsOrder = cols.map((c) => c.field);
-        return {
-          type: 'collection',
-          rows,
-          cols: { _id: '', doc: {} satisfies JSONObject },
-          columnsOrder,
-        };
-      } else {
-        // const colNames = cols.map((c) => getSqlString(c.field));
-        const colNames = cols.map((c) => c.field);
-        if (!colNames.length) {
-          throw appErrors.server(
-            500,
-            'Query error - No columns found in table',
-          );
-        }
+      const escapedColumns = columnsOrder
+        .map((col) => escapeId(col))
+        .join(', ');
+      const sortByList = Array.isArray(sortBy) ? sortBy : undefined;
+      const orderSql = sortByList?.length
+        ? `ORDER BY ${sortByList.join(', ')}`
+        : '';
+      const paginationSql = `LIMIT ? OFFSET ?`;
+      const sql = `SELECT ${escapedColumns} FROM ${escapeId(database)}.${escapeId(table)} ${orderSql} ${paginationSql}`;
 
-        const columnsObj = indexBy(cols, 'field');
+      const [rowObjects] = await sessionData.sqlSession.query<SqlQueryRow[]>(
+        sql,
+        [limit + 1, offset],
+      );
 
-        if (isObjectEmpty(columnsObj)) {
-          throw appErrors.server(
-            500,
-            'Query error - No columns found in table',
-          );
-        }
+      const rowsPageResult = buildPaging({
+        columnsOrder,
+        rowObjects,
+        limit,
+        offset,
+      });
 
-        const paginationSql = `LIMIT ${safeLimit} OFFSET ${safeOffset}`;
-        const dbQuery = `SELECT ${colNames.join(', ')} FROM ${escapeId(table)} ${paginationSql}`;
-        const [sqlRows] =
-          await sessionData.sqlSession.query<RowDataPacket[]>(dbQuery);
-        const rows = sqlRows.map((row) => colNames.map((col) => row[col]));
-        // const rowsArray = await sessionData!.xSession.sql(dbQuery).execute();
-        // const rows = rowsArray.fetchAll();
-        // throw req.server.httpErrors.internalServerError(
-        //   'Forcing error to test client handling of server errors',
-        // );
-
-        return {
-          type: 'table',
-          rows,
-          cols: columnsObj,
-          columnsOrder: cols.map((c) => c.field),
-        };
-      }
+      return {
+        ...rowsPageResult,
+        ok: true,
+        message: 'Row fetch request completed',
+        cols,
+        columnsOrder,
+        rowTokens: getRowTokens({ rows: rowsPageResult.rows, cols, offset }),
+      };
     },
   });

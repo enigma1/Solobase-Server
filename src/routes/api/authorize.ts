@@ -52,7 +52,6 @@ export const login = async (req: FastifyRequest, rsp: FastifyReply) =>
       const capabilities = await getCapabilities(sessionData);
       return {
         data: {
-          schemas: sessionData.schemas.map((db) => db.getName()),
           preferences: sessionData.preferences || {},
           capabilities,
         },

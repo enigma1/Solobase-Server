@@ -51,9 +51,6 @@ export const sanitize = (input: unknown): string | null => {
   return input.replace(/[^a-z0-9\.,_-]/gim, '').trim();
 };
 
-export const getSqlString = (input: string): string =>
-  `\`${input.replace(/`/g, '``')}\``;
-
 export const getEscapedValue = (v: unknown): string => {
   if (v === null || v === undefined) return 'NULL';
 

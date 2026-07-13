@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { RowDataPacket, escape, escapeId } from 'mysql2';
 import mysqlx from '@mysql/xdevapi';
 import mysql from 'mysql2';
@@ -7,7 +8,6 @@ import { CookieSerializeOptions } from '@fastify/cookie';
 import {
   isObjectWithStringProperty,
   hasObjectProps,
-  getSqlString,
   errorResolver,
   indexBy,
 } from '>/services';
@@ -21,6 +21,8 @@ import {
   SqlColumns,
   SqlColumnQuery,
   UserCapabilities,
+  SqlColumnsShape,
+  SqlRow,
 } from '>/types';
 import { getCurrentTimestamp } from '>/services';
 
@@ -100,80 +102,134 @@ export const getColumns = async ({
   return columns;
 };
 
+type SqlIndexQuery = RowDataPacket & {
+  INDEX_NAME: string;
+  NON_UNIQUE: number;
+  COLUMN_NAME: string;
+};
+
 export const getRealColumns = async ({
   sessionData,
   table,
   database,
 }: MysqlUtilityProps): Promise<SqlColumns[]> => {
-  const [cols] = await sessionData.sqlSession.query<SqlColumnQuery[]>(
-    `SHOW COLUMNS FROM ${escapeId(database)}.${escapeId(table)}`,
-  );
+  const columnsSql = `
+    SELECT
+      COLUMN_NAME,
+      COLUMN_TYPE,
+      IS_NULLABLE,
+      COLUMN_DEFAULT,
+      EXTRA
+    FROM information_schema.columns
+    WHERE TABLE_SCHEMA = ?
+      AND TABLE_NAME = ?
+    ORDER BY ORDINAL_POSITION
+  `;
+
+  const indexesSql = `
+    SELECT
+      INDEX_NAME,
+      NON_UNIQUE,
+      COLUMN_NAME
+    FROM information_schema.statistics
+    WHERE TABLE_SCHEMA = ?
+      AND TABLE_NAME = ?
+  `;
+
+  const [[columns], [indexes]] = await Promise.all([
+    sessionData.sqlSession.query<SqlColumnQuery[]>(columnsSql, [
+      database,
+      table,
+    ]),
+    sessionData.sqlSession.query<SqlIndexQuery[]>(indexesSql, [
+      database,
+      table,
+    ]),
+  ]);
+
+  const keyMap = new Map<string, SqlColumns['key']>();
+
+  for (const index of indexes) {
+    const current = keyMap.get(index.COLUMN_NAME);
+
+    if (index.INDEX_NAME === 'PRIMARY') {
+      keyMap.set(index.COLUMN_NAME, 'PRI');
+      continue;
+    }
+
+    if (index.NON_UNIQUE === 0 && current !== 'PRI') {
+      keyMap.set(index.COLUMN_NAME, 'UNI');
+      continue;
+    }
+
+    if (!current) {
+      keyMap.set(index.COLUMN_NAME, 'MUL');
+    }
+  }
+
+  return columns
+    .filter((col) => !col.EXTRA?.toUpperCase().includes('GENERATED'))
+    .map((col) => ({
+      field: col.COLUMN_NAME,
+      type: col.COLUMN_TYPE,
+      nullable: col.IS_NULLABLE,
+      key: keyMap.get(col.COLUMN_NAME) ?? '',
+      defaultValue: col.COLUMN_DEFAULT,
+      extra: col.EXTRA,
+    }));
+};
+
+// export const getRealColumns = async ({
+//   sessionData,
+//   table,
+//   database,
+// }: MysqlUtilityProps): Promise<SqlColumns[]> => {
+//   const [cols] = await sessionData.sqlSession.query<SqlColumnQuery[]>(
+//     `SHOW COLUMNS FROM ${escapeId(database)}.${escapeId(table)}`,
+//   );
+
+//   return cols
+//     .filter((col) => !col.Extra?.toUpperCase().includes('GENERATED'))
+//     .map((col) => ({
+//       field: col.Field,
+//       type: col.Type,
+//       nullable: col.Null,
+//       key: col.Key,
+//       defaultValue: col.Default,
+//       extra: col.Extra,
+//     }));
+// };
+
+const getUniqueKeys = (cols: SqlColumns[]) => {
+  const primary = cols
+    .filter((col) => col.key === 'PRI')
+    .map((col) => col.field);
+
+  if (primary.length > 0) {
+    return primary;
+  }
 
   return cols
-    .filter((col) => !col.Extra?.toUpperCase().includes('GENERATED'))
-    .map((col) => ({
-      field: col.Field,
-      type: col.Type,
-      nullable: col.Null,
-      key: col.Key,
-      defaultValue: col.Default,
-      extra: col.Extra,
-    }));
+    .filter((col) => col.key === 'UNI' && col.nullable === 'NO')
+    .map((col) => col.field);
+};
+
+export const getAllKeys = (cols: SqlColumns[]) => {
+  return cols.filter((col) => col.key !== '').map((col) => col.field);
 };
 
 export const getColumnsOrdered = async (props: MysqlUtilityProps) => {
   const columns = await getRealColumns(props);
+  const uniqueKeys = getUniqueKeys(columns);
+  const allKeys = getAllKeys(columns);
+  const columnsOrder = columns.map((c) => c.field);
   const cols = indexBy(columns, 'field');
-  return {
-    cols,
-    columnsOrder: columns.map((c) => c.field),
-  };
-};
-
-/*
-      const colsData = await sessionData!.session
-        .sql(
-          `
-  SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE
-  FROM INFORMATION_SCHEMA.COLUMNS
-  WHERE TABLE_SCHEMA = ?
-  AND TABLE_NAME = ?
-  ORDER BY ORDINAL_POSITION
-`,
-        )
-        .bind(sessionData!.dbSelected, table)
-        .execute();
-        */
-
-export const getTableInfo = async (
-  session: SessionData,
-  tableName: string,
-  dbName?: string,
-): Promise<{
-  tableType: 'table' | 'collection';
-  cols: SqlColumns[];
-} | null> => {
-  const selectedDatabase = dbName ?? session.dbSelected;
-
-  if (!selectedDatabase) return null;
-
-  const rawCols = await getColumns({
-    sessionData: session,
-    table: tableName,
-    database: selectedDatabase,
-  });
-
-  if (!rawCols || rawCols.length === 0) {
-    return null;
-  }
-
-  const cols = rawCols.map(normalizeColumn);
-  const isCollection =
-    cols.filter((c) => c.field === 'doc' || c.field === '_id').length === 2;
 
   return {
-    tableType: isCollection ? 'collection' : 'table',
     cols,
+    columnsOrder,
+    uniqueKeys,
+    allKeys,
   };
 };
 
@@ -259,7 +315,7 @@ export const getDatabaseSchemaDetails = async (
   sessionData: SessionData,
   dbName: string,
 ) => {
-  const escapedName = getSqlString(dbName);
+  const escapedName = escapeId(dbName);
   const [schemaRows] = await sessionData.sqlSession.query<RowDataPacket[]>(
     `
     SELECT
@@ -294,50 +350,58 @@ export const getDatabaseServerDefaults = async (sessionData: SessionData) => {
   };
 };
 
-const defaultCapabilities: UserCapabilities = {
-  canGrantPrivileges: false,
-  canViewUsers: false,
-  canManageUsers: false,
-  canCreateDatabases: false,
-  canManageTables: false,
-  canEditData: false,
-};
+// const defaultCapabilities: UserCapabilities = {
+//   canGrantPrivileges: true,
+//   canViewUsers: true,
+//   canManageUsers: true,
+//   canCreateDatabases: true,
+//   canManageTables: true,
+//   canEditData: true,
+// };
 
-const getGrants = async (sessionData: SessionData) => {
-  const [rows] = await sessionData.sqlSession.query<(RowDataPacket & string)[]>(
-    'SHOW GRANTS FOR CURRENT_USER()',
-  );
-  return rows.map((row) => Object.values(row)[0] as string);
-};
+// const getGrants = async (sessionData: SessionData) => {
+//   const [rows] = await sessionData.sqlSession.query<(RowDataPacket & string)[]>(
+//     'SHOW GRANTS FOR CURRENT_USER()',
+//   );
+//   return rows.map((row) => Object.values(row)[0] as string);
+// };
+
+// export const getCapabilities = async (
+//   sessionData: SessionData,
+// ): Promise<UserCapabilities> => {
+//   const grants = await getGrants(sessionData);
+//   const joined = grants.join(' ');
+
+//   return {
+//     ...defaultCapabilities,
+//     canViewUsers:
+//       !joined.includes('ALL PRIVILEGES') &&
+//       !joined.includes('SELECT ON `mysql`.*'),
+
+//     canGrantPrivileges:
+//       !joined.includes('WITH GRANT OPTION') &&
+//       !joined.includes('ALL PRIVILEGES'),
+
+//     canManageUsers:
+//       !joined.includes('CREATE USER') &&
+//       !joined.includes('SYSTEM_USER') &&
+//       !joined.includes('ALL PRIVILEGES'),
+//   };
+// };
 
 export const getCapabilities = async (
   sessionData: SessionData,
-): Promise<UserCapabilities> => {
-  const grants = await getGrants(sessionData);
-  const joined = grants.join(' ');
-
-  const hasGrant = (text: string) =>
-    grants.some((grant) => grant.includes(text));
-  const all = joined.includes('ALL PRIVILEGES');
-
-  const privileges = {
-    canGrantPrivileges: all || hasGrant('WITH GRANT OPTION'),
-    canViewUsers: all || hasGrant('SELECT ON `mysql`.*'),
-    canManageUsers: all || hasGrant('CREATE USER') || hasGrant('SYSTEM_USER'),
-    canCreateDatabases: all || hasGrant('CREATE ON *.*'),
-    canManageTables:
-      all ||
-      hasGrant('CREATE') ||
-      hasGrant('ALTER') ||
-      hasGrant('DROP') ||
-      hasGrant('INDEX'),
-    canEditData:
-      all || hasGrant('INSERT') || hasGrant('UPDATE') || hasGrant('DELETE'),
-  };
-
-  console.log(
-    'privileges-------------------------------------------------->',
-    privileges,
+): Promise<string[]> => {
+  const [rows] = await sessionData.sqlSession.query<(RowDataPacket & string)[]>(
+    'SHOW GRANTS FOR CURRENT_USER()',
   );
-  return privileges;
+
+  return rows.map((r) => Object.values(r)[0] as string).filter(Boolean);
+};
+
+export const hasIdentity = (cols: SqlColumnsShape) =>
+  getUniqueKeys(Object.values(cols)).length > 0;
+
+export const fingerprint = (row: SqlRow): string => {
+  return createHash('sha1').update(JSON.stringify(row)).digest('hex');
 };

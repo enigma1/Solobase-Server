@@ -1,44 +1,70 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { apiCallAuth, indexBy, getRealColumns } from '>/services';
-import { SessionData, SqlColumns, FetchDatabasesResponse } from '>/types';
+import { RowDataPacket } from 'mysql2/promise';
+import { z } from 'zod';
+import {
+  apiCallAuth,
+  indexBy,
+  basePaginationSchema,
+  pageSizeValues,
+  buildPaging,
+} from '>/services';
+import {
+  SessionData,
+  SqlQueryRow,
+  SqlRow,
+  SqlColumns,
+  PagingRequest,
+  FetchDatabasesResponse,
+} from '>/types';
 
-export const fetchDatabasesCommon = async (sessionData: SessionData) => {
-  const queryResult = await sessionData.xSession
-    .sql('SELECT * FROM information_schema.SCHEMATA')
-    .execute();
-  const columns = queryResult.getColumns();
-  const rows = queryResult.fetchAll();
+export const fetchDatabasesCommon = async (
+  sessionData: SessionData,
+  pagination?: PagingRequest,
+) => {
+  const { limit = pageSizeValues[0], offset = 0 } = pagination?.paging ?? {};
+
   const columnsOrder: string[] = [];
-
   const cols = indexBy(
-    columns.map((c): SqlColumns => {
-      const fieldName = c.getColumnName();
-      columnsOrder.push(fieldName);
-      return {
-        field: fieldName,
-        type: 'unknown',
-        nullable: 'YES',
-        key: '',
-        defaultValue: null,
-        extra: '',
-      };
+    sessionData.schemaColumns.map((c): SqlColumns => {
+      columnsOrder.push(c.field);
+      return c;
     }),
     'field',
   );
 
+  const sql = `SELECT * FROM information_schema.SCHEMATA LIMIT ? OFFSET ?`;
+  const [rowObjects] = await sessionData.sqlSession.query<SqlQueryRow[]>(sql, [
+    limit + 1,
+    offset,
+  ]);
+
+  const rowsPageResult = buildPaging({
+    columnsOrder,
+    rowObjects,
+    limit,
+    offset,
+  });
+
   const result = {
-    rows,
+    ...rowsPageResult,
+    ok: true,
+    message: 'Databases Request completed successfully',
     cols,
     columnsOrder,
   };
   return result;
 };
 
+const FetchDatabasesSchema = z.object({
+  ...basePaginationSchema,
+});
+
 export const fetchDatabases = async (req: FastifyRequest, rsp: FastifyReply) =>
   apiCallAuth<FetchDatabasesResponse>({
     req,
     rsp,
     fn: async (sessionData) => {
-      return fetchDatabasesCommon(sessionData);
+      const request = FetchDatabasesSchema.parse(req.body);
+      return fetchDatabasesCommon(sessionData, request);
     },
   });

@@ -1,13 +1,39 @@
-import type { Scalar, SortExprStrList } from '@mysql/xdevapi/types';
+import type { SortExprStrList } from '@mysql/xdevapi/types';
 import type { FieldPacket, ResultSetHeader, OkPacketParams } from 'mysql2';
-import type { JSONObject } from 'type-plus';
-import type {
-  SqlColumns,
+import type { SqlColumns, CharsetMeta, StorageEngineMeta } from './mysql';
+
+import {
   SqlRow,
-  CharsetMeta,
-  StorageEngineMeta,
-} from './mysql';
+  SqlObject,
+  SqlTypes,
+  SqlTransportObject,
+  SqlTransportRow,
+  SqlTransportTypes,
+} from './db';
 import { GroupByModes } from '>/contracts';
+
+export type SortBy = {
+  column: string;
+  direction: 'ASC' | 'DESC';
+};
+
+export type SortRequest = {
+  sortBy?: SortBy[];
+};
+
+export type PagingResponse = {
+  paging?: {
+    hasNext: boolean;
+    hasPrevious: boolean;
+  };
+};
+
+export type PagingRequest = {
+  paging?: {
+    offset: number;
+    limit: number;
+  };
+};
 
 export type QueryLogEntry = {
   sql: string;
@@ -39,16 +65,24 @@ export type BasicResponse = {
   message: string;
 };
 
+export type BasicDataResponse = BasicResponse & BasicRowsShape & PagingResponse;
+
 export type DatabaseTableResponse = BasicResponse & {
   database?: string;
   table?: string;
   engine?: string;
 };
 
+export type TokenRow = {
+  rowIndex: number;
+  fingerprint: string;
+};
 export type BasicRowsShape = {
   rows: SqlRow[];
   cols: SqlColumnsShape;
   columnsOrder: string[];
+  rowTokens?: TokenRow[];
+  orderBy?: string;
 };
 
 export type TableBasics = {
@@ -71,9 +105,8 @@ export type UserCapabilities = {
 };
 
 export type LoginResponse = {
-  schemas: string[];
   preferences: Record<string, any>;
-  capabilities: UserCapabilities;
+  capabilities: string[];
 };
 // export type DatabaseInfo = RowDataPacket & {
 //   name: string;
@@ -87,11 +120,12 @@ export type LoginResponse = {
 export type AbortSqlRequest = {};
 export type AbortSqlResponse = BasicResponse;
 
-export type FetchTablesRequest = {
-  database?: string;
-};
+export type FetchTablesRequest = PagingRequest &
+  SortRequest & {
+    database?: string;
+  };
 
-export type FetchTablesResponse = BasicRowsShape;
+export type FetchTablesResponse = PagingResponse & BasicRowsShape;
 
 export type RunQueryRequest = {
   query: string;
@@ -111,7 +145,7 @@ export type ColumnInfo = {
 
 type ResultSetResponse = BasicResponse & {
   mode: 'resultset';
-  rows: Scalar[][];
+  rows: SqlRow[];
   columnsOrder: string[];
   cols: SqlColumnsShape;
 };
@@ -131,90 +165,29 @@ export type SelectDatabaseResponse = BasicResponse & {
   database?: string;
 };
 
-export type FetchRowsRequest = {
-  table: string;
-  offset?: number;
-  limit?: number;
-  sortBy?: SortExprStrList;
-  // sortBy?: (
-  //   | `${string} ASC`
-  //   | `${string} DESC`
-  //   | `${string} asc`
-  //   | `${string} desc`
-  // )[];
+export type FetchRowsRequest = TableBasics &
+  PagingRequest & {
+    sortBy?: SortBy[];
+  };
+export type FetchRowsResponse = BasicDataResponse;
+
+export type FetchDatabasesRequest = PagingRequest & {
+  sortBy?: SortBy[];
 };
 
-// export type SqlColumnType = [
-//   field: string,
-//   type: string,
-//   nullable: 'YES' | 'NO',
-//   key: 'PRI' | 'UNI' | 'MUL' | '',
-//   defaultValue: string | null,
-//   extra: string,
-// ];
+export type FetchDatabasesResponse = BasicRowsShape & PagingResponse;
 
-export type FetchDatabasesResponse = BasicRowsShape;
+// export type FetchRowsResponse = DbTableData & { columnsOrder: string[] };
 
-export type CollectionColumns = {
-  _id: string;
-  doc: JSONObject;
-};
-export type ScalarObject = Record<string, Scalar>;
-export type CollectionRow = { _id: string } & PrimeObject<JSONObject>;
-export type DbTableType = 'collection' | 'table';
-export type DbTableRow = CollectionRow | SqlRow;
-export type DbTableColumns = CollectionColumns | Record<string, SqlColumns>;
-
-export type DbTableData =
-  | {
-      type: 'table';
-      rows: SqlRow[];
-      cols: Record<string, SqlColumns>;
-    }
-  | {
-      type: 'collection';
-      rows: CollectionRow[];
-      cols: CollectionColumns;
-    };
-
-// export type DbTableData = {
-//   rows: DbTableRow[];
-//   cols: DbTableColumns;
-//   type: DbTableType;
-// };
-
-export type FetchRowsResponse = DbTableData & { columnsOrder: string[] };
-
-export type NonSqlRowsRequest = {
-  rows: {
-    _id: string;
-  }[];
-  table: string;
+export type ChangedRow = {
+  updatedValues: SqlTransportObject; // column name with new value
+  originalRow: SqlTransportRow; // original row as fetched from the database
+  rowToken?: TokenRow; // Fingerprint with offset if applicable
 };
 
-export type NonSqlRowsResponse = {
-  rows: CollectionColumns[];
-  cols: CollectionColumns;
-};
-
-type EditedRow = {
-  originalRow: SqlRow; // original row as fetched from the database
-  updatedValues: ScalarObject; // column name with new value
-  rowIndex?: number; // optional original row index as it was fetched
-};
-
-export type EditedCollectionRow = {
-  originalRow: CollectionRow; // original row as fetched from the database
-  updatedValues: CollectionRow; // column name with new value
-  rowIndex?: number; // optional original row index as it was fetched
-  command?: string; // original SQL command, if applicable
-};
-
-export type UpdateDataRowsRequest = {
-  dataRows: EditedRow[] | EditedCollectionRow[]; // All edited rows
-  command?: string; // original SQL command
-  table: string;
-  database: string;
+export type UpdateDataRowsRequest = TableBasics & {
+  dataRows: ChangedRow[]; // All edited rows
+  orderBy?: string;
 };
 
 export type UpdateDataRowsResponse = BasicResponse & {
@@ -384,12 +357,18 @@ export type CreateDataRowsRequest = TableBasics & {
 };
 export type CreateDataRowsResponse = BasicResponse & TableBasics;
 
+export type DeletedRow = {
+  originalRow: SqlTransportRow; // original row as fetched from the database
+  rowToken?: TokenRow; // Fingerprint with offset if applicable
+};
+
 export type DeleteDataRowsRequest = TableBasics & {
-  rows: SqlRow[];
+  dataRows: DeletedRow[]; // All edited rows
+  orderBy?: string;
 };
 export type DeleteDataRowsResponse = BasicResponse & TableBasics;
 
-export type FetchUsersResponse = BasicResponse & BasicRowsShape;
+export type FetchUsersResponse = BasicDataResponse;
 
 export type DeleteUsersRequest = {
   columnsOrder: string[];

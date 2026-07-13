@@ -1,63 +1,54 @@
-import { escapeId, type RowDataPacket } from 'mysql2';
+import { type RowDataPacket } from 'mysql2/promise';
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { apiCallAuth, getColumnsOrdered } from '>/services';
-import type { FetchUsersResponse, SqlRow, SqlColumns } from '>/types';
+import { z } from 'zod';
+import {
+  apiCallAuth,
+  getColumnsOrdered,
+  basePaginationSchema,
+  baseSortSchema,
+  pageSizeValues,
+  buildPaging,
+} from '>/services';
+import type { FetchUsersResponse, SqlRow, SqlQueryRow } from '>/types';
+
+const FetchUsersSchema = z.object({
+  ...basePaginationSchema,
+  ...baseSortSchema,
+});
 
 export const fetchUsers = async (req: FastifyRequest, rsp: FastifyReply) =>
   apiCallAuth({
     req,
     rsp,
     fn: async (sessionData): Promise<FetchUsersResponse> => {
-      // const queryResult = await sessionData.xSession
-      //   .sql('SELECT * from mysql.user')
-      //   .execute();
-      //   const rows = queryResult.fetchAll();
-      //   const columnsOrder: string[] = [];
-      //   const columns = queryResult.getColumns();
-
-      // const cols = indexBy(
-      //   columns.map((c): SqlColumns => {
-      //     const fieldName = c.getColumnName();
-      //     columnsOrder.push(fieldName);
-      //     return {
-      //       field: fieldName,
-      //       type: 'unknown',
-      //       nullable: 'YES',
-      //       key: '',
-      //       defaultValue: null,
-      //       extra: '',
-      //     };
-      //   }),
-      //   'field',
-      // );
-
-      // const result = {
-      //   rows,
-      //   cols,
-      //   columnsOrder,
-      // };
-      // return result;
-
+      const request = FetchUsersSchema.parse(req.body);
+      const { paging: pagination } = request;
+      const { limit = pageSizeValues[0], offset = 0 } = pagination ?? {};
       const { cols, columnsOrder } = await getColumnsOrdered({
         sessionData,
         database: 'mysql',
         table: 'user',
       });
-      const queryResult = await sessionData.xSession
-        .sql('SELECT * from mysql.user')
-        .execute();
-      const rows = queryResult.fetchAll();
 
-      // const [sqlRows] =
-      //   await sessionData.sqlSession.query<(RowDataPacket & SqlRow)[]>(sql);
-      // const rows = sqlRows.map((row) => columnsOrder.map((col) => row[col]));
+      const sql = `SELECT * FROM mysql.user LIMIT ? OFFSET ?`;
+      const [rowObjects] = await sessionData.sqlSession.query<SqlQueryRow[]>(
+        sql,
+        [limit + 1, offset],
+      );
+
+      const rowsPageResult = buildPaging({
+        columnsOrder,
+        rowObjects,
+        limit,
+        offset,
+      });
 
       const result = {
+        ...rowsPageResult,
         ok: true,
-        rows,
+        message: 'Users successfully retrieved',
         cols,
         columnsOrder,
-        message: 'Users successfully retrieved',
       };
       return result;
     },

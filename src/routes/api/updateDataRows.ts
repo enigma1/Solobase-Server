@@ -1,115 +1,187 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
-import mysqlx, { Literal } from '@mysql/xdevapi';
+import { escapeId, ResultSetHeader, RowDataPacket } from 'mysql2/promise';
 import { z } from 'zod';
-import { apiCallAuth, getTableInfo, getSqlString, appErrors } from '>/services';
+import { dbSession } from '>/db';
+import {
+  apiCallAuth,
+  appErrors,
+  getColumnsOrdered,
+  fingerprint,
+  isBinary,
+  buildKeyWhereClause,
+  selectWithKeys,
+  whereWithKeys,
+  whereWithValues,
+  baseTableSchema,
+  TokenRowSchema,
+} from '>/services';
 
 import type {
-  SessionData,
-  EditedCollectionRow,
   UpdateDataRowsResponse,
   UpdateDataRowsRequest,
-  BasicResponse,
+  ChangedRow,
+  SqlTransportRow,
+  MySqlError,
 } from '>/types';
-import { envConfig } from '>/config';
 
-type UpdateCollectionsProps = {
-  req: FastifyRequest;
-  schema: mysqlx.Schema;
-};
+const ChangedRowSchema = z.object({
+  originalRow: z.array(z.unknown()),
+  updatedValues: z.record(z.string(), z.unknown()),
+  rowToken: TokenRowSchema.optional(),
+});
 
-const updateCollections = async ({
-  req,
-  // session,
-  schema,
-}: UpdateCollectionsProps) => {
-  const { table, dataRows } = req.body as {
-    table: string;
-    dataRows: EditedCollectionRow[];
-  };
-
-  const cTable = schema.getCollection(table);
-
-  const affectedRows = await Promise.all(
-    dataRows.map(async (row) => {
-      const result = cTable.replaceOne(row.originalRow._id, row.updatedValues);
-      return Number(result.getAffectedItemsCount());
-    }),
-  );
-
-  return affectedRows;
-
-  // cTable.modify(rowsIds[0]._id).set(rowsIds[0]).execute();
-  // cTable.replaceOne(rowsIds[0]._id, rowsIds[0]);
-  // Implementation for updating non-SQL rows
-};
+const UpdateDataRowsSchema = z.object({
+  ...baseTableSchema,
+  dataRows: z.array(ChangedRowSchema),
+  orderBy: z.string().trim().min(1).max(256).optional(),
+});
 
 export const updateDataRows = async (req: FastifyRequest, rsp: FastifyReply) =>
   apiCallAuth({
     req,
     rsp,
     fn: async (sessionData): Promise<UpdateDataRowsResponse> => {
-      const { table, dataRows, command, database } =
-        req.body as UpdateDataRowsRequest;
-      const schema = sessionData.dbSelected
-        ? sessionData.xSession.getSchema(sessionData.dbSelected)
-        : null;
-      if (!schema) {
-        throw appErrors.server(404, 'A Database was not selected');
-      }
-      const tableInfo = await getTableInfo(sessionData, table);
-      if (!tableInfo) {
-        throw appErrors.server(404, 'Database Table was not found');
-      }
-      const { tableType, cols: colsArray } = tableInfo;
-      if (tableType === 'collection') {
-        const cRows = await updateCollections({
-          req,
-          schema,
-        });
-        return {
-          ok: cRows.length > 0,
-          database,
-          table,
-          message: `Rows updated successfully`,
-        };
-      }
-      // SQL Rows
-      const colNames = colsArray.map((c) => c.field);
-      // Construct queries for update
-      const affectedRowsInt64 = await Promise.all(
-        dataRows.map(async (row) => {
-          const values: Literal = [];
-          const setClauses = Object.entries(row.updatedValues)
-            .filter(([name]) => colNames.includes(name))
-            .map(([col, val]) => {
-              if (val === null) {
-                return `${getSqlString(col)} = NULL`; // no placeholder
-              }
-              values.push(val);
-              return `${getSqlString(col)} = ?`;
-            })
-            .join(', ');
+      const request = UpdateDataRowsSchema.parse(req.body);
+      const { database, table, dataRows, orderBy } = request;
 
-          const whereClause = Object.entries(row.originalRow)
-            .filter((_, idx) => colNames[idx])
-            .map(([, val], idx) => {
-              if (val === null) {
-                return `${getSqlString(colNames[idx])} IS NULL`; // special syntax
+      await dbSession.activate({ sessionData, database, refresh: true });
+
+      const {
+        allKeys,
+        uniqueKeys: keyColumns,
+        cols,
+        columnsOrder,
+      } = await getColumnsOrdered({
+        sessionData,
+        database,
+        table,
+      });
+
+      // Construct queries for update
+      const affectedRows: number[] = [];
+      for (const row of dataRows) {
+        const values: unknown[] = [];
+
+        const setClauses = Object.entries(row.updatedValues)
+          .filter(([name]) => cols[name])
+          .map(([col, val]) => {
+            if (val === null) {
+              return `${escapeId(col)} = NULL`;
+            }
+
+            const type = cols[col].type;
+            if (type.startsWith('json')) {
+              values.push(JSON.stringify(val));
+              return `${escapeId(col)} = CAST(? AS JSON)`;
+            }
+
+            if (
+              isBinary(type) &&
+              val &&
+              typeof val === 'object' &&
+              !Buffer.isBuffer(val) &&
+              'type' in val &&
+              (val as any).type === 'Buffer'
+            ) {
+              values.push(Buffer.from((val as any).data));
+              return `${escapeId(col)} = ?`;
+            }
+
+            values.push(val);
+            return `${escapeId(col)} = ?`;
+          })
+          .join(', ');
+
+        let whereClause;
+        if (keyColumns.length > 0) {
+          whereClause = buildKeyWhereClause({
+            keyColumns,
+            columnsOrder,
+            originalRow: row.originalRow as SqlTransportRow,
+            values,
+          });
+          const query = `UPDATE ${escapeId(database)}.${escapeId(table)} SET ${setClauses} WHERE ${whereClause}`;
+          const [result] = await sessionData.sqlSession.query<ResultSetHeader>(
+            query,
+            values,
+          );
+          affectedRows.push(Number(result.affectedRows));
+        } else {
+          try {
+            await sessionData.sqlSession.beginTransaction();
+            const selectFirst = `SELECT * from ${escapeId(database)}.${escapeId(table)}`;
+            const orderSql = orderBy
+              ? escapeId(orderBy)
+              : escapeId(columnsOrder[0]);
+            const selectQuery = `${selectFirst} ORDER BY ${orderSql} LIMIT 1 OFFSET ?`;
+            const sValues = [row.rowToken!.rowIndex];
+            const [sResult] = await sessionData.sqlSession.query<
+              RowDataPacket[]
+            >(selectQuery, sValues);
+
+            if (sResult.length === 0) {
+              const mError = {
+                errno: 0,
+                code: 'invalid_row',
+                sqlState: '0',
+                sqlMessage: 'Data row does not exist',
+                sql: selectQuery,
+              };
+              throw appErrors.mysql(mError);
+            }
+
+            const sqlRow = columnsOrder.map((col) => sResult[0][col]);
+            const sFingerprint = fingerprint(sqlRow);
+
+            if (sFingerprint === row.rowToken?.fingerprint) {
+              const withKeys = await selectWithKeys({
+                selectFirst,
+                allKeys,
+                columnsOrder,
+                originalRow: row.originalRow as SqlTransportRow,
+                sessionData,
+              });
+
+              if (withKeys) {
+                whereClause = whereWithKeys({
+                  allKeys,
+                  row: row as ChangedRow,
+                  columnsOrder,
+                  values,
+                });
+              } else {
+                whereClause = whereWithValues({
+                  row: row as ChangedRow,
+                  columnsOrder,
+                  cols,
+                  values,
+                });
               }
-              values.push(val);
-              return `${getSqlString(colNames[idx])} = ?`;
-            })
-            .join(' AND ');
-          const query = `UPDATE ${getSqlString(table)} SET ${setClauses} WHERE ${whereClause}`;
-          const result = await sessionData.xSession
-            .sql(query)
-            .bind(values)
-            .execute();
-          return result.getAffectedItemsCount();
-        }),
-      );
-      // Execute updates in a transaction
-      const affectedRows = affectedRowsInt64.map((n) => Number(n));
+              const updateQuery = `UPDATE ${escapeId(database)}.${escapeId(table)} SET ${setClauses} WHERE ${whereClause}`;
+              const [result] =
+                await sessionData.sqlSession.query<ResultSetHeader>(
+                  updateQuery,
+                  values,
+                );
+
+              await sessionData.sqlSession.commit();
+              affectedRows.push(Number(result.affectedRows));
+            } else {
+              const mError = {
+                errno: 0,
+                code: 'fingerprint_mismatch',
+                sqlState: '0',
+                sqlMessage: 'Could not match fingerprint',
+                sql: selectQuery,
+              };
+              throw appErrors.mysql(mError);
+            }
+          } catch (e) {
+            await sessionData.sqlSession.rollback();
+            throw appErrors.mysql(e as MySqlError);
+          }
+        }
+      }
       return {
         ok: affectedRows.length > 0,
         database,

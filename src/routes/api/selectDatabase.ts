@@ -17,13 +17,6 @@ export const selectDatabase = async (req: FastifyRequest, rsp: FastifyReply) =>
       const request = SelectDatabaseSchema.parse(req.body);
       const { database } = request;
 
-      if (database === sessionData.dbSelected)
-        return {
-          ok: false,
-          database: database,
-          message: `Database ${database} is already selected`,
-        };
-
       const [rows] = await sessionData.sqlSession.query<RowDataPacket[]>(
         `SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = ?`,
         [database],
@@ -38,7 +31,11 @@ export const selectDatabase = async (req: FastifyRequest, rsp: FastifyReply) =>
       }
 
       // Update selected database in the session
-      const result = await dbSession.activate(sessionData, database);
+      const result = await dbSession.activate({
+        sessionData,
+        database,
+        refresh: true,
+      });
       return {
         ok: result,
         database,

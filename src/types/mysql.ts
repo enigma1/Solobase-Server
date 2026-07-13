@@ -1,14 +1,30 @@
-import type { RowDataPacket, Connection as StreamConnection } from 'mysql2';
-import type { Connection as SqlConnection } from 'mysql2/promise';
+import type { Connection as StreamConnection } from 'mysql2';
 import type {
-  Session as XSession,
-  Schema,
-  Scalar,
-  SortExprStrList,
-} from '@mysql/xdevapi';
+  RowDataPacket,
+  Connection as SqlConnection,
+} from 'mysql2/promise';
+import type { Session as XSession, Schema } from '@mysql/xdevapi';
 import type { PrimeObject, QueryLogEntry } from '>/types/frontEnd';
+import type { SqlRow } from './db';
 import { WorkerConnection } from './connections';
 export type XApiSession = XSession & { threadId: number };
+
+export type MySqlError = {
+  errno: number;
+  code: string;
+  sqlState: string;
+  sqlMessage: string;
+  sql: string;
+};
+
+export type SqlColumn = {
+  Field: string;
+  Type: string;
+  Null: 'YES' | 'NO';
+  Key: 'PRI' | 'UNI' | 'MUL' | '';
+  Default: string | null;
+  Extra: string;
+};
 
 export type MySqlCaps = {
   collationsByCharset: Record<string, CharsetMeta>;
@@ -30,7 +46,8 @@ export type SessionData = MySqlCaps & {
   streamWorker: WorkerConnection<StreamConnection>;
 
   // appSession: XApiSession; // the app MySQL session
-  schemas: Schema[]; // schemas available to this session
+  // schemas: Schema[]; // schemas available to this session
+  schemaColumns: SqlColumns[];
   dbSelected: string | null; // initially null
   // tableSelected: string | null;
   username: string;
@@ -64,14 +81,7 @@ export type CollationRow = RowDataPacket & {
   Sortlen: number;
 };
 
-export type SqlColumnQuery = RowDataPacket & {
-  Field: string;
-  Type: string;
-  Null: 'YES' | 'NO';
-  Key: 'PRI' | 'UNI' | 'MUL' | '';
-  Default: string | null;
-  Extra: string;
-};
+export type SqlColumnQuery = RowDataPacket & SqlColumn;
 
 export type CharsetMeta = {
   maxlen: number;
@@ -87,7 +97,6 @@ export type StorageEngineMeta = {
   savepoints: boolean;
 };
 
-export type SqlRow = Scalar[];
 export type SqlColumns = {
   field: string;
   type: string;
@@ -116,3 +125,5 @@ export type MysqlPrivileges = {
 
   canEditData: boolean;
 };
+
+export type SqlQueryRow = SqlRow & RowDataPacket;

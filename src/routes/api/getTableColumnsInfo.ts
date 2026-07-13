@@ -1,11 +1,11 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import {
   apiCallAuth,
-  getTableInfo,
   isObjectEmpty,
   indexBy,
   appErrors,
   CommonBaseTableSchema,
+  getRealColumns,
 } from '>/services';
 
 import type {
@@ -23,11 +23,11 @@ export const getTableColumnsInfo = async (
     fn: async (sessionData): Promise<GetTableColumnsInfoResponse> => {
       const request = CommonBaseTableSchema.parse(req.body);
       const { database, table } = request;
-      const info = await getTableInfo(sessionData, table, database);
-      if (!info) {
-        throw appErrors.server(404, 'A Database and/or Table was not found');
-      }
-      const { cols } = info;
+      const cols = await getRealColumns({
+        sessionData,
+        table,
+        database,
+      });
       const colNames = cols.map((c) => c.field);
       if (!colNames.length) {
         throw appErrors.server(500, 'Query error - No columns found in table');

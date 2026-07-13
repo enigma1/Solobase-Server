@@ -34,13 +34,11 @@ export const importData = async (req: FastifyRequest, rsp: FastifyReply) =>
           `SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = ?`,
           [database],
         );
-        await dbSession.activate(sessionData, database);
+        await dbSession.activate({ sessionData, database });
       }
 
       const modes =
-        groupByMode === 'legacy'
-          ? ['NO_ENGINE_SUBSTITUTION', 'ONLY_FULL_GROUP_BY']
-          : undefined;
+        groupByMode === 'legacy' ? ['NO_ENGINE_SUBSTITUTION'] : undefined;
       const response = await compatibleQueryExecution({
         sqlSession: sessionData.sqlSession,
         modes,
@@ -55,8 +53,6 @@ export const importData = async (req: FastifyRequest, rsp: FastifyReply) =>
 
       //await sessionData.sqlSession.query(data);
       //if (oldMode) await restoreGroupByMode(sessionData.sqlSession, oldMode);
-
-      sessionData.schemas = await sessionData.xSession.getSchemas();
       sessionData.dbSelected = null;
 
       return {

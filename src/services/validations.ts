@@ -1,4 +1,10 @@
 import { z } from 'zod';
+import { sortByAllowedChars } from './apiHelpers';
+import {
+  SqlTransportObject,
+  SqlTransportRow,
+  SqlTransportTypes,
+} from '>/types';
 
 export const emptyToUndefined = (v: unknown) =>
   typeof v === 'string' && v.trim() === '' ? undefined : v;
@@ -31,9 +37,27 @@ export const TableShapeKeySchema = z.object({
     .optional(),
 });
 
+export const baseSortSchema = {
+  sortBy: z
+    .array(z.string().regex(sortByAllowedChars, 'Invalid sortBy format'))
+    .optional(),
+};
+
 export const baseTableSchema = {
   database: z.string().trim().min(1).max(64),
   table: z.string().trim().min(1).max(64),
+};
+
+export const pageSizeValues = [5, 25, 50, 100, 250] as const;
+const PageSizeSchema = z.union(pageSizeValues.map((size) => z.literal(size)));
+
+export const basePaginationSchema = {
+  paging: z
+    .object({
+      limit: PageSizeSchema,
+      offset: z.coerce.number().int().min(0),
+    })
+    .optional(),
 };
 
 export const CommonBaseTableSchema = z.object(baseTableSchema);
@@ -55,3 +79,19 @@ export const ScalarSchema = z.union([
 ]);
 
 export const UserProfileSchema = z.enum(['admin', 'editor', 'readOnly']);
+
+const JsonValueSchema: z.ZodType<SqlTransportTypes> = z.lazy(() =>
+  z.union([
+    z.string(),
+    z.number(),
+    z.boolean(),
+    z.null(),
+    z.array(JsonValueSchema),
+    z.record(z.string(), JsonValueSchema),
+  ]),
+);
+
+export const TokenRowSchema = z.object({
+  rowIndex: z.number().int().min(0),
+  fingerprint: z.string().trim().min(1),
+});

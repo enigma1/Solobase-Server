@@ -19,6 +19,7 @@ import {
   sqlSessionInterceptor,
   xSessionInterceptor,
   streamSessionInterceptor,
+  getRealColumns,
   createQueryLogger,
 } from '>/services';
 import { getEnvKey } from './appSession';
@@ -70,32 +71,6 @@ export const startJanitors = () => {
   startRetirementJanitor();
   startIdleJanitor();
 };
-
-// export const sessionJanitor = () => {
-//   setInterval(async () => {
-//     const now = getCurrentTimestamp();
-
-//     let i = 0;
-
-//     while (i < endSessions.length) {
-//       const s = endSessions[i];
-
-//       if (Date.now() - s.dateMarked < now) break;
-
-//       dbSession.release(s);
-//       i++;
-//     }
-//     endSessions.length = endSessions.length - i;
-
-//     for (const [sessionId, session] of sessionStore.entries()) {
-//       const idle = now - session.lastSqlActivity;
-
-//       if (idle > envConfig.sqlIdleTimeout) {
-//         await remove(sessionId, true);
-//       }
-//     }
-//   }, envConfig.pollingIdleTimer);
-// };
 
 const create = async (request: LoginRequest): Promise<SessionData> => {
   const logger = createQueryLogger();
@@ -184,11 +159,12 @@ const create = async (request: LoginRequest): Promise<SessionData> => {
   // });
 
   // getSchemas on xDevApi connector is async!!
-  const schemas = await xWorker.conn.getSchemas();
+  // const schemas = await xWorker.conn.getSchemas();
+
   const caps = await getMysqlCapabilities(sqlWorker.conn);
 
   const sessionId = uuidv4(); // generate unique session ID
-  const sessionData = {
+  const sessionData: SessionData = {
     ...caps,
     sessionId,
     xSession: xWorker.conn,
@@ -202,7 +178,8 @@ const create = async (request: LoginRequest): Promise<SessionData> => {
     // streamSession
     // ctrlSession,
     // appSession,
-    schemas,
+    schemaColumns: [],
+    // schemas,
     dbSelected: null,
     username: request.username,
     preferences: {},
@@ -210,6 +187,14 @@ const create = async (request: LoginRequest): Promise<SessionData> => {
     lastSqlActivity: getCurrentTimestamp(),
     dateMarked: getCurrentTimestamp(),
   };
+
+  const columns = await getRealColumns({
+    sessionData,
+    database: 'information_schema',
+    table: 'SCHEMATA',
+  });
+
+  sessionData.schemaColumns = columns;
 
   sessionData.sqlSession.on('error', (err) => {
     console.error('sqlSession----------->', err);
@@ -254,12 +239,23 @@ const remove = async (
   return false;
 };
 
-const activate = async (sessionData: SessionData, dbName?: string) => {
-  const db = dbName ?? sessionData.dbSelected;
+type SessionActivateProps = {
+  sessionData: SessionData;
+  database?: string;
+  refresh?: boolean;
+};
+const activate = async ({
+  sessionData,
+  database,
+  refresh,
+}: SessionActivateProps) => {
+  const db = database ?? sessionData.dbSelected;
 
-  if (!db || db === sessionData.dbSelected) {
+  if (!db) {
     return false;
   }
+
+  if (!refresh && db === sessionData.dbSelected) return false;
 
   await sessionData.sqlSession.query(`USE ${escapeId(db)}`);
   await sessionData.xSession.sql(`USE ${escapeId(db)}`).execute();
@@ -282,10 +278,15 @@ const refresh = async (sessionData: SessionData) => {
     streamSession: sessionData.streamSession,
     xSession: sessionData.xSession,
   });
-  sessionData.sqlSession = await sessionData.sqlWorker.create();
-  sessionData.xSession = await sessionData.xWorker.create();
-  sessionData.streamSession =
+  sessionData.sqlWorker.conn = await sessionData.sqlWorker.create();
+  sessionData.xWorker.conn = await sessionData.xWorker.create();
+  sessionData.streamWorker.conn =
     sessionData.streamWorker.create() as StreamConnection;
+
+  sessionData.sqlSession = sessionData.sqlWorker.conn;
+  sessionData.xSession = sessionData.xWorker.conn;
+  sessionData.streamSession = sessionData.streamWorker.conn;
+  activate({ sessionData, refresh: true });
 };
 
 const release = async (sessionData: SessionData) => {

@@ -1,19 +1,5 @@
 import { ZodError } from 'zod';
-
-export type MySqlError = {
-  errno: number;
-  code: string;
-  sqlState: string;
-  sqlMessage: string;
-  sql: string;
-};
-
-export type AppError =
-  | { type: 'auth'; kind: 'missing' | 'invalid' }
-  | { type: 'mysql'; error: MySqlError }
-  | { type: 'validation'; error: ZodError }
-  | { type: 'domain'; code: string; message: string }
-  | { type: 'server'; code: number; message: string };
+import { AppError, MySqlError } from '>/types';
 
 export const appErrors = {
   authMissing: () => ({
@@ -86,35 +72,3 @@ export const errorResolver = (e: unknown): AppError => {
 
   return appErrors.server(500, err?.message ?? 'Unknown error');
 };
-
-// export const mySqlErrorProps = ['info', ['code', 'sqlState', 'msg']];
-// export const serverErrorProps = ['code', 'status'];
-
-// export type ErrorItem = Error & {
-//   status: string;
-//   code: number;
-// };
-
-// const sessionMissing = (): ErrorItem =>
-//   Object.assign(new Error('Login required'), {
-//     status: 'SESSION_MISSING',
-//     code: 401,
-//   });
-
-// const invalidSession = (): ErrorItem =>
-//   Object.assign(new Error('Invalid session'), {
-//     status: 'SESSION_INVALID',
-//     code: 401,
-//   });
-
-// export const errorLayer: Record<string, () => ErrorItem> = {
-//   sessionMissing,
-//   invalidSession,
-// };
-
-// export const isAuthError = (error: unknown): error is ErrorItem => {
-//   if (!error || typeof error !== 'object') return false;
-//   if (!('status' in error)) return false;
-//   const status = (error as ErrorItem).status;
-//   return status === 'SESSION_INVALID' || status === 'SESSION_MISSING';
-// };

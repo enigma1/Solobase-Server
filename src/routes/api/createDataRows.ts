@@ -1,5 +1,4 @@
 import { type ResultSetHeader, escapeId } from 'mysql2';
-import { Scalar, SqlResult } from '@mysql/xdevapi';
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import {

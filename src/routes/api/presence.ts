@@ -23,12 +23,13 @@ export const presence = async (req: FastifyRequest, rsp: FastifyReply) =>
           } satisfies BasicResponse,
         };
       }
+      const schemas = await fetchDatabasesCommon(sessionData);
       const result = {
         effects: {
           sessionId: sessionData.sessionId,
         },
         data: {
-          schemas: await fetchDatabasesCommon(sessionData),
+          schemas,
           username: sessionData.username,
           dbSelected: sessionData.dbSelected,
           preferences: sessionData.preferences || {},

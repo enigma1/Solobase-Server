@@ -8,6 +8,9 @@ import {
   CharsetRow,
   CollationRow,
   UserProfile,
+  SqlRow,
+  SqlColumns,
+  SqlColumnsShape,
 } from '>/types';
 
 export const getMysqlCapabilities = async (
@@ -65,6 +68,10 @@ export const getMysqlCapabilities = async (
   };
 };
 
+const normalizeLegacySql = (sql: string) => {
+  return sql.replace(/\bTYPE\s*=/gi, 'ENGINE=');
+};
+
 type SessionModeProps = {
   sqlSession: Connection;
   modes?: string[];
@@ -78,14 +85,18 @@ export const compatibleQueryExecution = async ({
   if (!modes || modes.length === 0) {
     return await sqlSession.query(data);
   }
+
+  const sql = typeof data === 'string' ? normalizeLegacySql(data) : data;
+
   const [rows] = await sqlSession.query<
     (RowDataPacket & { sql_mode: string })[]
   >('SELECT @@SESSION.sql_mode AS sql_mode');
+
   const originalMode = rows?.[0]?.sql_mode ?? '';
+
   try {
-    const sql = modes.join(',');
-    await sqlSession.query('SET SESSION sql_mode = ?', [sql]);
-    return await sqlSession.query(data);
+    await sqlSession.query('SET SESSION sql_mode = ?', [modes.join(',')]);
+    return await sqlSession.query(sql);
   } finally {
     await sqlSession.query('SET SESSION sql_mode = ?', [originalMode]);
   }

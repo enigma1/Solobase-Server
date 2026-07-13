@@ -1,5 +1,5 @@
 import type { FieldPacket, RowDataPacket } from 'mysql2';
-import type { ColumnInfo, SqlColumnsShape } from '>/types';
+import type { ColumnInfo, SqlColumnsShape, SqlQueryRow } from '>/types';
 
 type ParseColumnTypeResult = {
   type: string;
@@ -101,4 +101,32 @@ export const isRowDataPacketArray = (
   return (
     Array.isArray(value) && (value.length === 0 || !Array.isArray(value[0]))
   );
+};
+
+type BuildPagingProps = {
+  rowObjects: SqlQueryRow[];
+  columnsOrder: string[];
+  limit: number;
+  offset: number;
+};
+export const buildPaging = ({
+  rowObjects,
+  columnsOrder,
+  limit,
+  offset,
+}: BuildPagingProps) => {
+  const rowsPlus1 = rowObjects.map((row) =>
+    columnsOrder.map((col) => row[col]),
+  );
+
+  const hasNext = rowsPlus1.length > limit;
+  const hasPrevious = offset > 0;
+
+  return {
+    rows: hasNext ? rowsPlus1.slice(0, limit) : rowsPlus1,
+    paging: {
+      hasNext,
+      hasPrevious,
+    },
+  };
 };

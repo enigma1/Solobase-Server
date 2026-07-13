@@ -1,5 +1,4 @@
 import { v4 as uuidv4 } from 'uuid';
-import { Scalar } from '@mysql/xdevapi';
 import {
   Connection as StreamConnection,
   escape,
