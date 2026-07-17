@@ -1,8 +1,8 @@
-import { ResultSetHeader, RowDataPacket } from 'mysql2';
+import { RowDataPacket } from 'mysql2/promise';
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { dbSession } from '>/db/session';
-import { apiCallAuth, dbNameAllowedChars } from '>/services';
+import { apiCallAuth } from '>/services';
 import { SelectDatabaseRequest, SelectDatabaseResponse } from '>/types';
 
 const SelectDatabaseSchema = z.object({

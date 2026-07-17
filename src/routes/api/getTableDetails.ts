@@ -6,7 +6,6 @@ import {
   CommonBaseTableSchema,
   parseColumnType,
 } from '>/services';
-import { dbSession } from '>/db';
 import type {
   GetTableDetailsRequest,
   GetTableDetailsResponse,
@@ -27,7 +26,6 @@ export const getTableDetails = async (req: FastifyRequest, rsp: FastifyReply) =>
       const { xSession } = sessionData;
 
       // Update selected database in the session
-      // const tables = await xSession.getSchema(dbSafeName).getTables();
       const basicSql = `SELECT * FROM information_schema.tables WHERE table_schema = ? and table_name = ?`;
       const colsSql = `SELECT * FROM information_schema.columns WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? ORDER BY ORDINAL_POSITION`;
       const keysSql = `SELECT * FROM information_schema.statistics WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?`;
@@ -55,21 +53,6 @@ export const getTableDetails = async (req: FastifyRequest, rsp: FastifyReply) =>
           Object.fromEntries(names.map((name, i) => [name, (row as any)[i]])),
         );
       };
-
-      //       const ssql = `
-      // SELECT
-      //     INDEX_NAME,
-      //     NON_UNIQUE,
-      //     COLUMN_NAME,
-      //     SEQ_IN_INDEX
-      // FROM information_schema.statistics
-      // WHERE TABLE_SCHEMA = 'testing'
-      // AND TABLE_NAME = 'test-comments';`;
-
-      //       const ssqlResult = await xSession.sql(ssql).execute();
-
-      //       const [row] = ssqlResult.fetchAll();
-      //       console.log('xSession----------------------->', row);
 
       const [basicRow] = fetchRows(basicQueryResult);
       const colsRows = fetchRows(colsQueryResult) as ColumnsRow[];

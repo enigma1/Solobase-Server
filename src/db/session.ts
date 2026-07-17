@@ -1,10 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
-import mysqlStream, {
-  Connection as StreamConnection,
-  type RowDataPacket,
-} from 'mysql2';
-import mysql, { Connection as SqlConnection, escapeId } from 'mysql2/promise';
-import mysqlx from '@mysql/xdevapi';
+import { Connection as StreamConnection } from 'mysql2';
+import { Connection as SqlConnection, escapeId } from 'mysql2/promise';
 import { envConfig } from '>/config';
 import {
   WorkerConnection,
@@ -16,13 +12,9 @@ import {
   getCurrentTimestamp,
   appErrors,
   getMysqlCapabilities,
-  sqlSessionInterceptor,
-  xSessionInterceptor,
-  streamSessionInterceptor,
   getRealColumns,
   createQueryLogger,
 } from '>/services';
-import { getEnvKey } from './appSession';
 import {
   createXConnection,
   createSqlConnection,

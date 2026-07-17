@@ -16,6 +16,7 @@ export * from './fetchTables';
 export * from './fetchUsers';
 export * from './deleteUsers';
 export * from './exportDatabases';
+export * from './exportTables';
 export * from './authorize';
 export * from './updateDataRows';
 export * from './deleteDatabases';

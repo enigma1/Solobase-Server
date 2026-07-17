@@ -151,51 +151,6 @@ export const deleteDataRows = async (req: FastifyRequest, rsp: FastifyReply) =>
         }
       }
 
-      // const results = await Promise.allSettled(
-      //   rows.map(async (row) => {
-      //     const values: SqlRow = [];
-
-      //     const whereClause = row
-      //       .map((value, index) => {
-      //         const col = columns[index];
-
-      //         if (value === null) {
-      //           return `${escapeId(col.field)} IS NULL`;
-      //         }
-
-      //         const normalizedValue =
-      //           col.type.toLowerCase() === 'json' && value !== null
-      //             ? JSON.stringify(value)
-      //             : typeof value === 'boolean'
-      //               ? Number(value)
-      //               : value;
-
-      //         values.push(normalizedValue as SqlTypes);
-
-      //         return `${escapeId(col.field)} = ?`;
-      //       })
-      //       .join(' AND ');
-
-      //     const sql = `DELETE FROM ${escapeId(database)}.${escapeId(table)} WHERE ${whereClause}`;
-      //     const [result] = await sessionData.sqlSession.query<ResultSetHeader>(
-      //       sql,
-      //       values,
-      //     );
-
-      //     return {
-      //       row,
-      //       affectedRows: result.affectedRows,
-      //     };
-      //   }),
-      // );
-
-      // const affectedRows = results.reduce((acc, r) => {
-      //   if (r.status === 'fulfilled') {
-      //     return acc + r.value.affectedRows;
-      //   }
-      //   return acc;
-      // }, 0);
-
       const ok = affectedRows.length > 0;
       const deleted = affectedRows.reduce((a, b) => a + b, 0);
       return {

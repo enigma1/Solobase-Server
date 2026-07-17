@@ -2,8 +2,10 @@ import Fastify from 'fastify';
 import cookie from '@fastify/cookie';
 import fastifyCors from '@fastify/cors';
 import fastifySensible from '@fastify/sensible';
-import { envConfig, fastifyConfig } from '>/config';
+import { fastifyConfig, getEnvKey } from '>/config';
 import { routes } from '>/routes/routes';
+
+const reflectOrigin = getEnvKey('REFLECT_ORIGIN') === '1';
 
 // Show NodeJS unexpected errors
 process.on('uncaughtException', (err) => {
@@ -17,7 +19,11 @@ process.on('unhandledRejection', (reason) => {
 export const server = Fastify(fastifyConfig);
 
 await server.register(fastifyCors, {
-  origin: envConfig.front.origin,
+  origin: reflectOrigin
+    ? (origin, cb) => {
+        cb(null, origin ?? false);
+      }
+    : getEnvKey('FRONTEND_ORIGIN'),
   credentials: true,
   allowedHeaders: ['Content-Type', 'Authorization'], // include Content-Type
   exposedHeaders: ['Set-Cookie', 'Content-Disposition'],

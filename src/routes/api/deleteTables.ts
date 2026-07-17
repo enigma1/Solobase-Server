@@ -1,13 +1,18 @@
 import { escapeId, ResultSetHeader } from 'mysql2';
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
-import { apiCallAuth, appErrors } from '>/services';
+import { apiCallAuth, isSystemDatabase } from '>/services';
 import type { DeleteTablesResponse, DeleteTablesRequest } from '>/types';
 
-const DeleteTablesSchema = z.object({
-  database: z.string().trim().min(1).max(64),
-  tables: z.array(z.string().trim().min(1).max(64)),
-});
+const DeleteTablesSchema = z
+  .object({
+    database: z.string().trim().min(1).max(64),
+    tables: z.array(z.string().trim().min(1).max(64)),
+  })
+  .refine(({ database }) => !isSystemDatabase(database), {
+    message: 'Cannot modify system databases',
+    path: ['database'],
+  });
 
 export const deleteTables = async (req: FastifyRequest, rsp: FastifyReply) =>
   apiCallAuth({
@@ -16,7 +21,6 @@ export const deleteTables = async (req: FastifyRequest, rsp: FastifyReply) =>
     fn: async (sessionData): Promise<DeleteTablesResponse> => {
       const request = DeleteTablesSchema.parse(req.body);
       const { tables, database } = request;
-      // throw appErrors.domain('delete_tables', `Table Delete Test`);
 
       const deletedTables = await Promise.all(
         tables.map(async (table) => {

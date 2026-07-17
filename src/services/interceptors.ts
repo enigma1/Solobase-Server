@@ -1,6 +1,5 @@
 import type { Connection as PromiseConnection } from 'mysql2/promise';
 import mysqlStream from 'mysql2';
-import mysqlx from '@mysql/xdevapi';
 import { QueryLogEntry, XApiSession } from '>/types';
 
 const MAX_QUERY_LENGTH = 2048;
@@ -27,15 +26,7 @@ export const sqlSessionInterceptor = ({
           if (typeof sqlModed === 'string') {
             const start = performance.now();
             const startedAt = Date.now();
-            // console.log(
-            //   'QUERY START------------------------->',
-            //   sqlModed.slice(0, 30),
-            // );
             const result = await value.apply(target, args);
-            // console.log(
-            //   'QUERY END---------------------------->',
-            //   sqlModed.slice(0, 30),
-            // );
             const sql =
               sqlModed.length > MAX_QUERY_LENGTH
                 ? `${sqlModed.slice(0, MAX_QUERY_LENGTH)}...`

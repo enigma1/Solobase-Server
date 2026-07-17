@@ -1,12 +1,18 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
-import { apiCallAuth, apiCallUnknown, getCapabilities } from '>/services';
+import {
+  apiCallAuth,
+  apiCallUnknown,
+  getCapabilities,
+  getCookieOptions,
+} from '>/services';
 import { dbSession } from '>/db';
 import type {
   LoginRequest,
   LoginResponse,
   BasicResponse,
   ApiResponse,
+  CleanupResponse,
 } from '>/types';
 
 export const logout = async (req: FastifyRequest, rsp: FastifyReply) =>
@@ -57,6 +63,21 @@ export const login = async (req: FastifyRequest, rsp: FastifyReply) =>
         },
         effects: {
           sessionId: sessionData.sessionId,
+        },
+      };
+    },
+  });
+
+export const cleanup = async (req: FastifyRequest, rsp: FastifyReply) =>
+  apiCallUnknown({
+    req,
+    rsp,
+    fn: async (): Promise<ApiResponse<CleanupResponse>> => {
+      rsp.setCookie('sessionId', '', getCookieOptions(0));
+      return {
+        data: {
+          ok: true,
+          message: 'Session cleared',
         },
       };
     },

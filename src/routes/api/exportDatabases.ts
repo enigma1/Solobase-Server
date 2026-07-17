@@ -4,26 +4,15 @@ import { Readable } from 'node:stream';
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { escapeId, type RowDataPacket } from 'mysql2';
 import { z } from 'zod';
-import { envConfig } from '>/config';
+import { getEnvKey } from '>/config';
 import {
   apiCallStream,
   getDatabaseSchemaDetails,
   dbNameAllowedChars,
   getRealColumns,
+  buildFilename,
 } from '>/services';
 import type { ExportDatabasesRequest, ExportDatabasesResponse } from '>/types';
-import { unknownToSql } from '>/services/utils';
-
-const buildFilename = (databases: string[]) => {
-  let result = '';
-
-  for (const db of databases) {
-    const next = result ? `${result}-${db}` : db;
-    if (next.length > 100) break;
-    result = next;
-  }
-  return result;
-};
 
 const ExportDatabasesSchema = z.object({
   databases: z
@@ -38,14 +27,18 @@ export const exportDatabases = async (req: FastifyRequest, rsp: FastifyReply) =>
     fn: async (sessionData) => {
       const request = ExportDatabasesSchema.parse(req.body);
       const { databases } = request;
-      const raw = rsp.raw;
+      const origin =
+        getEnvKey('REFLECT_ORIGIN') === '1'
+          ? req.headers.origin
+          : getEnvKey('FRONTEND_ORIGIN');
 
+      const raw = rsp.raw;
       raw.setHeader('Content-Type', 'application/gzip');
       raw.setHeader(
         'Content-Disposition',
         `attachment; filename="${buildFilename(databases)}.sql.gz"`,
       );
-      raw.setHeader('Access-Control-Allow-Origin', envConfig.front.origin);
+      raw.setHeader('Access-Control-Allow-Origin', origin!);
       raw.setHeader('Access-Control-Allow-Credentials', 'true');
       raw.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');
 

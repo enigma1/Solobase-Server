@@ -3,7 +3,6 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import {
   apiCallAuth,
-  getCapabilities,
   UserProfileSchema,
   profileGrants,
   emptyToUndefined,
@@ -27,7 +26,6 @@ export const createUser = async (req: FastifyRequest, rsp: FastifyReply) =>
     fn: async (sessionData): Promise<CreateUserResponse> => {
       const request = CreateUserSchema.parse(req.body);
       const { user, host, password, profile } = request;
-      // const capabilities = getCapabilities(sessionData);
 
       // Create User
       const account = `${escape(user)}@${escape(host)}`;

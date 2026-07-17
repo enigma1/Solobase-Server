@@ -1,26 +1,22 @@
 import { server } from '>/server';
-import { envConfig } from '>/config';
 import { startJanitors } from '>/db';
-// import { appClient } from '>/db/appSession';
-const { port, host } = envConfig;
+import { getEnvKey } from '>/config';
 
-async function startServer() {
+const host = getEnvKey('BACKEND_HOST');
+const port = Number(getEnvKey('BACKEND_PORT'));
+
+const startServer = async () => {
   try {
-    // Test app DB connection at startup
-    // const session = await appClient.getSession();
-    // console.log('App DB connected');
-    // await session.close();
-
     // Start garbage collector;
     startJanitors();
     // Start Fastify server
-    await server.listen({ port, host });
+    await server.listen({ host, port });
     console.log(`Started server at https://${host}:${port}`);
   } catch (error) {
     console.error('Failed to start server:', error);
     process.exit(1);
   }
-}
+};
 
 // Global error handlers
 server.server.on('error', (error) => {

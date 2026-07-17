@@ -9,11 +9,7 @@ import {
   getDatabaseServerDefaults,
   emptyToUndefined,
 } from '>/services';
-import type {
-  SessionData,
-  EditDatabaseResponse,
-  EditDatabaseRequest,
-} from '>/types';
+import type { EditDatabaseResponse, EditDatabaseRequest } from '>/types';
 
 const EditDatabaseSchema = z.object({
   name: z.string().regex(dbNameAllowedChars, 'Invalid database name'),
@@ -31,7 +27,7 @@ export const editDatabase = async (req: FastifyRequest, rsp: FastifyReply) =>
       const charset = request.charset ?? defaults.charset;
       const collation = request.collation ?? defaults.collation;
       const name = request.name;
-      const charsetExistsResult = await charsetExists({
+      const charsetExistsResult = charsetExists({
         session: sessionData,
         charset,
       });
@@ -42,7 +38,7 @@ export const editDatabase = async (req: FastifyRequest, rsp: FastifyReply) =>
           message: 'Character set does not exist',
         };
       }
-      const collationExistsResult = await collationExists({
+      const collationExistsResult = collationExists({
         session: sessionData,
         collation,
         charset,

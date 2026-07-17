@@ -1,5 +1,5 @@
 import type { FieldPacket, RowDataPacket } from 'mysql2';
-import type { ColumnInfo, SqlColumnsShape, SqlQueryRow } from '>/types';
+import type { SqlColumnsShape, SqlQueryRow } from '>/types';
 
 type ParseColumnTypeResult = {
   type: string;
@@ -26,6 +26,8 @@ export const parseColumnType = (columnType: string) => {
     case 'VARCHAR':
     case 'CHAR':
     case 'BIT':
+    case 'BINARY':
+    case 'VARBINARY':
       if (rawParams) result.params = { Length: Number(rawParams) };
       break;
 

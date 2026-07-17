@@ -2,8 +2,8 @@ import { createConnection as streamConnnection } from 'mysql2';
 import { createConnection as sqlConnection } from 'mysql2/promise';
 import { createPool as sqlPool } from 'mysql2/promise';
 import { getSession } from '@mysql/xdevapi';
-import { getEnvKey } from './appSession';
-import { XApiSession, PrimeObject, QueryLogEntry, SessionData } from '>/types';
+import { getEnvKey } from '>/config';
+import { XApiSession, PrimeObject, QueryLogEntry } from '>/types';
 import {
   sqlSessionInterceptor,
   xSessionInterceptor,

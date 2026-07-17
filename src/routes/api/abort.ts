@@ -1,12 +1,5 @@
-import { v4 as uuidv4 } from 'uuid';
-import {
-  Connection as StreamConnection,
-  escape,
-  ResultSetHeader,
-  RowDataPacket,
-} from 'mysql2';
+import { RowDataPacket } from 'mysql2/promise';
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { z } from 'zod';
 import { apiCallAuth } from '>/services';
 import { ctrlSession, dbSession } from '>/db';
 import type { AbortSqlResponse, AbortSqlRequest } from '>/types';

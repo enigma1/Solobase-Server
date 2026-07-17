@@ -2,12 +2,21 @@ import { escapeId, ResultSetHeader } from 'mysql2';
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { dbSession } from '>/db/session';
-import { apiCallAuth } from '>/services';
-import type { DeleteDatabasesResponse, ApiResponse } from '>/types';
+import { apiCallAuth, systemDatabases, isSystemDatabase } from '>/services';
+import type { DeleteDatabasesResponse } from '>/types';
 
-const DeleteDatabasesSchema = z.object({
-  names: z.array(z.string().trim().min(1).max(64)),
-});
+const DeleteDatabasesSchema = z
+  .object({
+    names: z.array(z.string().trim().min(1).max(64)),
+  })
+  .refine(
+    ({ names }) =>
+      names.every((name) => !systemDatabases.has(name.toLowerCase())),
+    {
+      message: 'Cannot delete system databases',
+      path: ['names'],
+    },
+  );
 
 export const deleteDatabases = async (req: FastifyRequest, rsp: FastifyReply) =>
   apiCallAuth({
@@ -31,7 +40,6 @@ export const deleteDatabases = async (req: FastifyRequest, rsp: FastifyReply) =>
       if (wasSelectedDeleted) {
         await dbSession.resetDb(sessionData!);
         sessionData.dbSelected = null;
-        sessionData.schemas = await sessionData!.xSession.getSchemas();
       }
 
       // await sessionData!.sqlSession.query('SHOW DATABASES');

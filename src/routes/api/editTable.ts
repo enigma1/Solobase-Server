@@ -245,10 +245,7 @@ export const editTable = async (req: FastifyRequest, rsp: FastifyReply) =>
           await sessionData.sqlSession.query<ResultSetHeader>(sql);
         isUpdated ||= result.warningStatus === 0;
       }
-      // const [result] =
-      //   await sessionData.sqlSession.query<ResultSetHeader>(dbQuery);
 
-      // const isUpdated = result.warningStatus === 0;
       return {
         ok: isUpdated,
         database: db,

@@ -1,4 +1,3 @@
-import { type RowDataPacket } from 'mysql2/promise';
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import {
@@ -9,7 +8,7 @@ import {
   pageSizeValues,
   buildPaging,
 } from '>/services';
-import type { FetchUsersResponse, SqlRow, SqlQueryRow } from '>/types';
+import type { FetchUsersResponse, SqlQueryRow } from '>/types';
 
 const FetchUsersSchema = z.object({
   ...basePaginationSchema,

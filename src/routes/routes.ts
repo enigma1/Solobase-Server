@@ -1,6 +1,7 @@
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { FastifyInstance } from 'fastify';
 import {
   abortSql,
+  cleanup,
   login,
   logout,
   selectDatabase,
@@ -8,6 +9,7 @@ import {
   editDatabase,
   deleteDatabases,
   exportDatabases,
+  exportTables,
   getTableDetails,
   getTableColumnsInfo,
   fetchDatabaseInfo,
@@ -38,9 +40,11 @@ export const routes = async (server: FastifyInstance) => {
   });
   server.get('/api/check-session', checkSession);
   server.get('/auth/presence', presence);
-  server.get('/db/abort', abortSql);
   server.post('/auth/login', login);
   server.get('/auth/logout', logout);
+  server.get('/auth/cleanup', cleanup);
+
+  server.get('/db/abort', abortSql);
   server.post('/db/select-database', selectDatabase);
   server.post('/db/create-user', createUser);
   server.post('/db/edit-user', editUser);
@@ -66,6 +70,7 @@ export const routes = async (server: FastifyInstance) => {
   server.post('/db/edit-table', editTable);
   server.post('/db/delete-tables', deleteTables);
   server.post('/db/export-databases', exportDatabases);
+  server.post('/db/export-tables', exportTables);
   server.post('/db/create-database', createDatabase);
   server.post('/db/edit-database', editDatabase);
   server.post('/db/delete-databases', deleteDatabases);

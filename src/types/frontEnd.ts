@@ -1,15 +1,6 @@
-import type { SortExprStrList } from '@mysql/xdevapi/types';
-import type { FieldPacket, ResultSetHeader, OkPacketParams } from 'mysql2';
+import type { ResultSetHeader, OkPacketParams } from 'mysql2/promise';
 import type { SqlColumns, CharsetMeta, StorageEngineMeta } from './mysql';
-
-import {
-  SqlRow,
-  SqlObject,
-  SqlTypes,
-  SqlTransportObject,
-  SqlTransportRow,
-  SqlTransportTypes,
-} from './db';
+import { SqlRow, SqlTransportObject, SqlTransportRow } from './db';
 import { GroupByModes } from '>/contracts';
 
 export type SortBy = {
@@ -104,18 +95,12 @@ export type UserCapabilities = {
   canEditData: boolean;
 };
 
+export type CleanupResponse = BasicResponse;
+
 export type LoginResponse = {
   preferences: Record<string, any>;
   capabilities: string[];
 };
-// export type DatabaseInfo = RowDataPacket & {
-//   name: string;
-//   charset: string;
-//   collation: string;
-// };
-// export type FetchDatabasesResponse = {
-//   databases: DatabaseInfo[];
-// };
 
 export type AbortSqlRequest = {};
 export type AbortSqlResponse = BasicResponse;
@@ -125,7 +110,7 @@ export type FetchTablesRequest = PagingRequest &
     database?: string;
   };
 
-export type FetchTablesResponse = PagingResponse & BasicRowsShape;
+export type FetchTablesResponse = BasicDataResponse;
 
 export type RunQueryRequest = {
   query: string;
@@ -200,20 +185,6 @@ export type RunQueryResponse = BasicRowsShape & {
   truncated: boolean;
 };
 
-// export type CharsetMeta = {
-//   maxlen: number;
-//   defaultCollation: string;
-//   collations: string[];
-// };
-
-// type StorageEngineMeta = {
-//   name: string;
-//   isDefault: boolean;
-//   transactions: boolean;
-//   xa: boolean;
-//   savepoints: boolean;
-// };
-
 export type FetchDatabaseInfoResponse = {
   collationsByCharset: Record<string, CharsetMeta>;
   engines: StorageEngineMeta[];
@@ -275,6 +246,11 @@ export type ExportDatabasesRequest = {
 
 export type ExportDatabasesResponse = BasicResponse & {
   databases: string[];
+};
+
+export type ExportTablesRequest = {
+  database: string;
+  tables: string[];
 };
 
 export type DeleteDatabasesRequest = {

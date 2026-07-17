@@ -2,11 +2,7 @@ import { escape, ResultSetHeader } from 'mysql2';
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { apiCallAuth } from '>/services';
-import type {
-  SessionData,
-  DeleteUsersRequest,
-  DeleteUsersResponse,
-} from '>/types';
+import type { DeleteUsersRequest, DeleteUsersResponse } from '>/types';
 
 const DeleteUsersSchema = z.object({
   columnsOrder: z.array(z.string()).min(1),

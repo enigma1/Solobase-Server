@@ -1,20 +1,29 @@
-import { escapeId, ResultSetHeader } from 'mysql2';
+import { escapeId, ResultSetHeader } from 'mysql2/promise';
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import {
   apiCallAuth,
   collationExists,
   charsetExists,
-  getDatabaseServerDefaults,
   emptyToUndefined,
 } from '>/services';
 import type { CreateDatabaseResponse, CreateDatabaseRequest } from '>/types';
 
-const CreateDatabaseSchema = z.object({
-  name: z.string().trim().min(1).max(64),
-  charset: z.preprocess(emptyToUndefined, z.string().optional()),
-  collation: z.preprocess(emptyToUndefined, z.string().optional()),
-});
+const CreateDatabaseSchema = z
+  .object({
+    name: z.string().trim().min(1).max(64),
+    charset: z.preprocess(emptyToUndefined, z.string().optional()),
+    collation: z.preprocess(emptyToUndefined, z.string().optional()),
+  })
+  .refine(
+    (data) => {
+      return !data.charset || !!data.collation;
+    },
+    {
+      message: 'Collation is required when charset is specified',
+      path: ['collation'],
+    },
+  );
 
 export const createDatabase = async (req: FastifyRequest, rsp: FastifyReply) =>
   apiCallAuth({
@@ -56,7 +65,6 @@ export const createDatabase = async (req: FastifyRequest, rsp: FastifyReply) =>
       const dbQuery = `CREATE DATABASE IF NOT EXISTS ${escapeId(name)} CHARACTER SET ${charset} COLLATE ${collation}`;
       const [result] =
         await sessionData.sqlSession.query<ResultSetHeader>(dbQuery);
-      sessionData.schemas = await sessionData.xSession.getSchemas();
 
       const isCreated = result.warningStatus === 0;
 

@@ -10,8 +10,6 @@ import {
   buildColumnsOrder,
   isRowDataPacketArray,
   compatibleQueryExecution,
-  // setGroupByMode,
-  // restoreGroupByMode,
 } from '>/services';
 import { GroupByModesSchema } from '>/contracts';
 import type { SqlRow, RunRawQueryResponse, RunRawQueryRequest } from '>/types';

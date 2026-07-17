@@ -28,7 +28,7 @@ export const buildKeyWhereClause = ({
   originalRow,
   values,
 }: BuildKeyWhereClauseProps) => {
-  return keyColumns
+  const result = keyColumns
     .map((column) => {
       const index = columnsOrder.indexOf(column);
       const value = originalRow[index];
@@ -37,6 +37,7 @@ export const buildKeyWhereClause = ({
       return `${escapeId(column)} = ?`;
     })
     .join(' AND ');
+  return result;
 };
 
 type WhereWithValuesProps = {
@@ -52,7 +53,7 @@ export const whereWithValues = ({
   cols,
   values,
 }: WhereWithValuesProps) => {
-  return row.originalRow
+  const result = row.originalRow
     .map((val, idx) => {
       const col = columnsOrder[idx];
       const type = cols[col].type;
@@ -82,6 +83,7 @@ export const whereWithValues = ({
       return `${escapeId(col)} = ?`;
     })
     .join(' AND ');
+  return result;
 };
 
 type SelectWithKeysProps = {
@@ -98,6 +100,7 @@ export const selectWithKeys = async ({
   originalRow,
   sessionData,
 }: SelectWithKeysProps) => {
+  if (!allKeys.length) return false;
   const selectValues: unknown[] = [];
 
   const whereClause = buildKeyWhereClause({

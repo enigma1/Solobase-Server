@@ -60,10 +60,10 @@ const FetchDatabasesSchema = z.object({
 });
 
 export const fetchDatabases = async (req: FastifyRequest, rsp: FastifyReply) =>
-  apiCallAuth<FetchDatabasesResponse>({
+  apiCallAuth({
     req,
     rsp,
-    fn: async (sessionData) => {
+    fn: async (sessionData): Promise<FetchDatabasesResponse> => {
       const request = FetchDatabasesSchema.parse(req.body);
       return fetchDatabasesCommon(sessionData, request);
     },

@@ -1,10 +1,7 @@
 import { createHash } from 'node:crypto';
 import { RowDataPacket, escape, escapeId } from 'mysql2';
 import mysqlx from '@mysql/xdevapi';
-import mysql from 'mysql2';
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { ZodError, treeifyError } from 'zod';
-import { CookieSerializeOptions } from '@fastify/cookie';
 import {
   isObjectWithStringProperty,
   hasObjectProps,
@@ -12,7 +9,6 @@ import {
   indexBy,
 } from '>/services';
 import { appClient, dbSession } from '>/db';
-import { envConfig, limitsConfig } from '>/config';
 import {
   XApiSession,
   MysqlUtilityProps,
@@ -233,14 +229,6 @@ export const getColumnsOrdered = async (props: MysqlUtilityProps) => {
   };
 };
 
-export const formatQuery = (query: string): string => {
-  let formattedQuery = query.trim();
-  if (/^\s*select/i.test(query) && !/limit\s+\d+/i.test(query)) {
-    formattedQuery += ` LIMIT ${limitsConfig.maxRowsFetch}`;
-  }
-  return formattedQuery;
-};
-
 export const withAppSession = async <T>(
   fn: (session: mysqlx.Session) => Promise<T>,
 ) => {
@@ -251,65 +239,6 @@ export const withAppSession = async <T>(
     await session.close();
   }
 };
-
-// type CharsetCheckResult = {
-//   session: SessionData;
-//   charset: string;
-// };
-// export const charsetExists = async ({
-//   session,
-//   charset,
-// }: CharsetCheckResult): Promise<boolean> => {
-//   const [rows] = await session.sqlSession.query<RowDataPacket[]>(
-//     `
-//       SELECT 1
-//       FROM information_schema.CHARACTER_SETS
-//       WHERE CHARACTER_SET_NAME = ?
-//     `,
-//     [charset],
-//   );
-//   return !!rows.length;
-// };
-
-// type CollationCheckResult = {
-//   session: SessionData;
-//   collation: string;
-//   charset: string;
-// };
-// export const collationExists = async ({
-//   session,
-//   collation,
-//   charset,
-// }: CollationCheckResult): Promise<boolean> => {
-//   const [rows] = await session.sqlSession.query<RowDataPacket[]>(
-//     `
-//       SELECT 1
-//       FROM information_schema.COLLATIONS
-//       WHERE COLLATION_NAME = ?
-//       AND CHARACTER_SET_NAME = ?
-//     `,
-//     [collation, charset],
-//   );
-//   return rows.length > 0;
-// };
-
-// export const getEngines = async (sessionData: SessionData) => {
-//   const [engines] =
-//     await sessionData.sqlSession.query<RowDataPacket[]>(`SHOW ENGINES`);
-//   return engines;
-// };
-
-// type EngineExistsProps = {
-//   session: SessionData;
-//   engine: string;
-// };
-// export const engineExists = async ({ session, engine }: EngineExistsProps) => {
-//   const engines = session.engines;
-//   const normalizeEngine = (e: string) => e.toLowerCase();
-//   return engines.some(
-//     (e) => normalizeEngine(e.name) === normalizeEngine(engine),
-//   );
-// };
 
 export const getDatabaseSchemaDetails = async (
   sessionData: SessionData,

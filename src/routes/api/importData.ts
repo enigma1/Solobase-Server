@@ -5,8 +5,6 @@ import { dbSession } from '>/db/session';
 import {
   apiCallAuth,
   emptyToUndefined,
-  // setGroupByMode,
-  // restoreGroupByMode,
   compatibleQueryExecution,
 } from '>/services';
 import type { ImportDataResponse, ImportDataRequest } from '>/types';
@@ -44,15 +42,7 @@ export const importData = async (req: FastifyRequest, rsp: FastifyReply) =>
         modes,
         data,
       });
-      // if (groupByMode && groupByMode !== 'default') {
-      //   oldMode = await setGroupByMode(
-      //     sessionData.sqlSession,
-      //     groupByMode === 'legacy',
-      //   );
-      // }
 
-      //await sessionData.sqlSession.query(data);
-      //if (oldMode) await restoreGroupByMode(sessionData.sqlSession, oldMode);
       sessionData.dbSelected = null;
 
       return {

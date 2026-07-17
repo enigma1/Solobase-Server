@@ -1,14 +1,13 @@
-import { escapeId, escape, ResultSetHeader } from 'mysql2';
+import { escape, ResultSetHeader } from 'mysql2/promise';
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import {
   apiCallAuth,
-  getCapabilities,
   UserProfileSchema,
   profileGrants,
   emptyToUndefined,
 } from '>/services';
-import type { EditUserRequest, EditUserResponse, UserProfile } from '>/types';
+import type { EditUserRequest, EditUserResponse } from '>/types';
 
 const EditUserSchema = z.object({
   orgUser: z.string().trim().min(2).max(64),
@@ -38,7 +37,6 @@ export const editUser = async (req: FastifyRequest, rsp: FastifyReply) =>
         passwordChange,
         profile,
       } = request;
-      // const capabilities = getCapabilities(sessionData);
 
       // Get User
       const account = `${escape(user)}@${escape(host)}`;

@@ -1,10 +1,6 @@
 import { z } from 'zod';
 import { sortByAllowedChars } from './apiHelpers';
-import {
-  SqlTransportObject,
-  SqlTransportRow,
-  SqlTransportTypes,
-} from '>/types';
+import { SqlTransportTypes } from '>/types';
 
 export const emptyToUndefined = (v: unknown) =>
   typeof v === 'string' && v.trim() === '' ? undefined : v;

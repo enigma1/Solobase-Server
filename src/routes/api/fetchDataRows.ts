@@ -1,5 +1,5 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { escapeId, type RowDataPacket } from 'mysql2/promise';
+import { escapeId } from 'mysql2/promise';
 import { z } from 'zod';
 import { apiCallAuth, getColumnsOrdered } from '>/services';
 import {

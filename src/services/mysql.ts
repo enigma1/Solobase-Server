@@ -1,4 +1,4 @@
-import { type RowDataPacket } from 'mysql2';
+import type { RowDataPacket } from 'mysql2/promise';
 import type { Connection } from 'mysql2/promise';
 import {
   CharsetMeta,
@@ -8,9 +8,6 @@ import {
   CharsetRow,
   CollationRow,
   UserProfile,
-  SqlRow,
-  SqlColumns,
-  SqlColumnsShape,
 } from '>/types';
 
 export const getMysqlCapabilities = async (
@@ -102,38 +99,6 @@ export const compatibleQueryExecution = async ({
   }
 };
 
-// export const setGroupByMode = async (
-//   sqlSession: Connection,
-//   legacyMode: boolean,
-// ) => {
-//   const [rows] = await sqlSession.query<
-//     (RowDataPacket & { sql_mode: string })[]
-//   >('SELECT @@SESSION.sql_mode AS sql_mode');
-
-//   const originalMode = rows?.[0]?.sql_mode ?? '';
-
-//   if (legacyMode) {
-//     await sqlSession.query(`
-//       SET SESSION sql_mode =
-//       REPLACE(@@SESSION.sql_mode, 'ONLY_FULL_GROUP_BY', '')
-//     `);
-//   } else {
-//     await sqlSession.query(`
-//       SET SESSION sql_mode =
-//       CONCAT(@@SESSION.sql_mode, ',ONLY_FULL_GROUP_BY')
-//     `);
-//   }
-
-//   return originalMode;
-// };
-
-// export const restoreGroupByMode = async (
-//   sqlSession: Connection,
-//   originalMode: string,
-// ) => {
-//   await sqlSession.query('SET SESSION sql_mode = ?', [originalMode]);
-// };
-
 export const getCharsets = (session: SessionData) =>
   Object.keys(session.collationsByCharset);
 
@@ -182,3 +147,13 @@ export const profileGrants: Record<UserProfile, string[]> = {
 
   readOnly: ['SELECT ON *.*'],
 };
+
+export const systemDatabases = new Set([
+  'mysql',
+  'information_schema',
+  'performance_schema',
+  'sys',
+]);
+
+export const isSystemDatabase = (name: string) =>
+  systemDatabases.has(name.toLowerCase());

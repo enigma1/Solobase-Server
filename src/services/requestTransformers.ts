@@ -1,5 +1,4 @@
 import { escape, escapeId } from 'mysql2';
-import { appErrors } from './errorLayer';
 import { TableShapeColumn, TableShapeKey } from '>/types';
 
 const buildColumnType = (col: TableShapeColumn): string => {
@@ -183,4 +182,16 @@ export const buildDropKeyDefinition = (key: TableShapeKey) => {
     case 'FOREIGN':
       return `DROP FOREIGN KEY ${escapeId(key.name!)}`;
   }
+};
+
+
+export const buildFilename = (names: string[]) => {
+  let result = '';
+
+  for (const name of names) {
+    const next = result ? `${result}-${name}` : name;
+    if (next.length > 100) break;
+    result = next;
+  }
+  return result;
 };

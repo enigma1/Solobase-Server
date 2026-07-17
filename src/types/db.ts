@@ -1,4 +1,3 @@
-import type { RowDataPacket } from 'mysql2/promise';
 import { JSONTypes, JSONObject } from 'type-plus';
 
 export type SqlTransportTypes = JSONTypes;

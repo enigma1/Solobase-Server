@@ -1,4 +1,4 @@
-import { escape } from 'mysql2';
+import { escape } from 'mysql2/promise';
 import { QueryLogEntry } from '>/types';
 
 export const isObjectEmpty = (obj: unknown): boolean =>

@@ -1,39 +1,44 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { ZodError, treeifyError } from 'zod';
 import { CookieSerializeOptions } from '@fastify/cookie';
-import {
-  isObjectWithStringProperty,
-  hasObjectProps,
-  errorResolver,
-} from '>/services';
-import { appClient, dbSession, sessionStore } from '>/db';
-import { envConfig, limitsConfig } from '>/config';
+import { hasObjectProps, errorResolver } from '>/services';
+import { dbSession, sessionStore } from '>/db';
+import { getEnvKey, envConfig } from '>/config';
 import { ApiResponse, SessionData } from '>/types';
 import { getCurrentTimestamp, appErrors } from '>/services';
+
+const useSsl = getEnvKey('SSL_ENABLED') === '1';
+const useCookieDomain = getEnvKey('COOKIE_USE_DOMAIN') === '1';
 
 export const processOrThrowSession = (req: FastifyRequest): SessionData => {
   const sessionId = req.cookies?.sessionId;
 
   if (!sessionId) {
     throw appErrors.authMissing();
-    // const error = Object.assign(new Error('Login required'), {
-    //   type: 'auth',
-    //   status: 'SESSION_MISSING',
-    //   code: 401,
-    // });
-    // throw error;
   }
   return dbSession.get(sessionId);
 };
 
-export const getCookieOptions = (maxAge: number): CookieSerializeOptions => ({
-  httpOnly: true,
-  path: '/',
-  maxAge: maxAge / 1000,
-  sameSite: 'none',
-  secure: true,
-  domain: envConfig.front.client,
-});
+export const getCookieOptions = (maxAge: number): CookieSerializeOptions => {
+  const cookieParams = {
+    httpOnly: true,
+    path: '/',
+    maxAge: maxAge / 1000,
+    ...(useCookieDomain ? { domain: getEnvKey('FRONTEND_HOST') } : {}),
+  };
+  if (useSsl) {
+    return {
+      ...cookieParams,
+      sameSite: 'none',
+      secure: true,
+    };
+  } else {
+    return {
+      ...cookieParams,
+      sameSite: 'lax',
+    };
+  }
+};
 
 type HandleApiFnArgs = {
   req: FastifyRequest;
@@ -96,7 +101,7 @@ const handleApiFn = async <T>(
           error: 'Invalid request',
           code: 400,
           message: 'Validation failed - see details',
-          details: treeifyError(error.error),
+          details: error.error.issues.map((issue) => issue.message),
         });
         break;
 
@@ -125,10 +130,6 @@ const handleApiFn = async <T>(
         break;
     }
     return;
-    // return {
-    //   ...result,
-    //   route: req.url,
-    // };
   }
 };
 
@@ -154,15 +155,6 @@ export const apiCallAuth = async <T>({ req, rsp, fn }: ApiCallAuthProps<T>) =>
 
       const res = await fn(sessionData);
       if (!hasObjectProps(res, ['data'])) return res;
-
-      // const sessionId = res.effects?.sessionId;
-      // if (sessionId !== undefined) {
-      //   rsp.setCookie(
-      //     'sessionId',
-      //     sessionId,
-      //     getCookieOptions(envConfig.cookieTimeout),
-      //   );
-      // }
 
       if (res.effects?.headers) {
         for (const [key, value] of Object.entries(res.effects.headers)) {
@@ -248,81 +240,7 @@ export const apiCallStream = async <T>({ req, rsp, fn }: ApiCallStreamProps) =>
         sessionData.sessionId,
         getCookieOptions(envConfig.cookieTimeout),
       );
-
       const res = await fn(sessionData);
-      // const headers = res?.effects?.headers;
-      // if (headers !== undefined) {
-      //   for (const [key, value] of Object.entries(headers)) {
-      //     rsp.header(key, value);
-      //   }
-      // }
-      // const status = res?.effects?.status;
-      // if (status !== undefined) {
-      //   rsp.status(status);
-      // }
     },
     { req, rsp, mode: 'stream' },
   );
-
-// type ApiCallOptions = {
-//   allowAnonymous?: boolean;
-//   setCookie?: (reply: FastifyReply, sessionId: string) => void;
-// };
-
-// type ApiResult<T> = T & {
-//   sessionId?: string;
-// };
-
-// type ApiCallArgs<T> = {
-//   req: FastifyRequest;
-//   rsp: FastifyReply;
-//   // fn: (sessionData: SessionData | undefined) => Promise<T>;
-//   fn: (sessionData: SessionData | undefined) => Promise<ApiResult<T>>;
-//   options?: ApiCallOptions;
-// };
-// export const apiCall = async <T>({
-//   req,
-//   rsp,
-//   fn,
-//   options = {},
-// }: ApiCallArgs<T>): Promise<T> =>
-//   handleApiFn(
-//     async () => {
-//       const { allowAnonymous = false, setCookie } = options;
-//       // Extract sessionId from cookie
-//       let sessionData: SessionData | undefined;
-//       // let sessionId = req?.cookies?.sessionId;
-//       if (!allowAnonymous) {
-//         // sessionData = dbSession.get(sessionId); // throws if invalid
-//         sessionData = processOrThrowSession(req);
-//       }
-
-//       // Keep sqlSession alive
-//       if (sessionData) {
-//         sessionData.lastSqlActivity = getCurrentTimestamp();
-//       }
-
-//       const fnResult = await fn(sessionData);
-
-//       // Assign sessionId if not already set and result has a string sessionId
-//       const hasSessionId = isObjectWithStringProperty(fnResult, 'sessionId');
-//       const canSendCookie = setCookie;
-//       if (!hasSessionId) {
-//         // clear the cookie
-//         if (canSendCookie) {
-//           rsp.setCookie('sessionId', '', getCookieOptions(0));
-//         }
-//         return fnResult;
-//       } else if (canSendCookie) {
-//         rsp.setCookie(
-//           'sessionId',
-//           fnResult.sessionId,
-//           getCookieOptions(envConfig.cookieTimeout),
-//         );
-//         setCookie(rsp, fnResult.sessionId);
-//       }
-//       const { sessionId: removed, ...result } = fnResult;
-//       return result as T;
-//     },
-//     { req, rsp },
-//   );

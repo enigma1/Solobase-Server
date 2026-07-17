@@ -16,8 +16,14 @@
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
     "resolveJsonModule": true,
-    "noEmit": true,
-    "types": ["node"]
+    "noEmit": false,
+    "types": ["node"],
+    "outDir": "dist",
+    "rootDir": "src"
+  },
+  "tsc-alias": {
+    "resolveFullPaths": true,
+    "verbose": true
   },
   "include": ["src/**/*", "*.ts", "*.js"],
   "exclude": ["node_modules", "dist", "build", "tmp"]
