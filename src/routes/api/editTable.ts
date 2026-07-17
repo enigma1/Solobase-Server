@@ -1,4 +1,4 @@
-import isEqual from 'lodash-es/isEqual';
+import { isEqual } from 'lodash-es';
 import { escapeId, ResultSetHeader } from 'mysql2';
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';

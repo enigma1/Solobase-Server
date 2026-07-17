@@ -86,73 +86,6 @@ const create = async (request: LoginRequest): Promise<SessionData> => {
   sqlWorker.conn = await sqlWorker.create();
   streamWorker.conn = streamWorker.create() as StreamConnection;
 
-  // xDevApi connection
-  // const xSession = (await mysqlx.getSession({
-  //   host: envConfig.dbUser.host,
-  //   port: envConfig.dbUser.port,
-  //   user: body.username,
-  //   password: body.password,
-  // })) as XApiSession;
-  // const queryResult = await xSession
-  //   .sql('SELECT CONNECTION_ID() AS id')
-  //   .execute();
-
-  // const row = queryResult.fetchOne() as any;
-  // xSession.threadId = typeof row === 'object' ? row.id : row[0];
-
-  // Classic MySQL connection use classic protocol
-  // const sqlSession = await mysql.createConnection({
-  //   host: envConfig.dbSqlUser.host,
-  //   port: envConfig.dbSqlUser.port,
-  //   user: body.username,
-  //   password: body.password,
-  //   database: undefined,
-  //   dateStrings: true,
-  //   multipleStatements: true,
-  // });
-
-  // // Classic MySQL connection use classic protocol
-  // const ctrlSession = await mysql.createConnection({
-  //   host: envConfig.dbSqlUser.host,
-  //   port: envConfig.dbSqlUser.port,
-  //   user: body.username,
-  //   password: body.password,
-  // });
-
-  // const sqlPool = mysql.createPool({
-  //   host: getEnvKey('DB_HOST') ?? '127.0.0.1',
-  //   port: Number(getEnvKey('DB_PORT') ?? 3306),
-  //   user: getEnvKey('DB_USER') ?? 'root',
-  //   password: getEnvKey('DB_PASSWORD'),
-  //   database: undefined,
-  //   dateStrings: true,
-  //   multipleStatements: true,
-  // });
-
-  // For streamed connection use a separate one
-  // const streamSession = mysqlStream.createConnection({
-  //   host: envConfig.dbSqlUser.host,
-  //   port: envConfig.dbSqlUser.port,
-  //   user: body.username,
-  //   password: body.password,
-  //   database: undefined,
-  //   dateStrings: true,
-  //   multipleStatements: true,
-  // });
-
-  // const xSessionProxy = xSessionInterceptor({ xSession, push: logger.push });
-  // const sqlSessionProxy = sqlSessionInterceptor({
-  //   sqlSession,
-  //   push: logger.push,
-  // });
-  // const streamSessionProxy = streamSessionInterceptor({
-  //   streamSession,
-  //   push: logger.push,
-  // });
-
-  // getSchemas on xDevApi connector is async!!
-  // const schemas = await xWorker.conn.getSchemas();
-
   const caps = await getMysqlCapabilities(sqlWorker.conn);
 
   const sessionId = uuidv4(); // generate unique session ID
@@ -165,9 +98,6 @@ const create = async (request: LoginRequest): Promise<SessionData> => {
     xWorker,
     sqlWorker,
     streamWorker,
-    // xSession,
-    // sqlSession,
-    // streamSession
     // ctrlSession,
     // appSession,
     schemaColumns: [],

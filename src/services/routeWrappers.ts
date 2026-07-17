@@ -1,5 +1,4 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { ZodError, treeifyError } from 'zod';
 import { CookieSerializeOptions } from '@fastify/cookie';
 import { hasObjectProps, errorResolver } from '>/services';
 import { dbSession, sessionStore } from '>/db';
