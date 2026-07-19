@@ -126,7 +126,7 @@ export const updateDataRows = async (req: FastifyRequest, rsp: FastifyReply) =>
                 sqlMessage: 'Data row does not exist',
                 sql: selectQuery,
               };
-              throw appErrors.mysql(mError);
+              throw mError;
             }
 
             const sqlRow = columnsOrder.map((col) => sResult[0][col]);
@@ -156,6 +156,7 @@ export const updateDataRows = async (req: FastifyRequest, rsp: FastifyReply) =>
                   values,
                 });
               }
+
               const updateQuery = `UPDATE ${escapeId(database)}.${escapeId(table)} SET ${setClauses} WHERE ${whereClause}`;
               const [result] =
                 await sessionData.sqlSession.query<ResultSetHeader>(
@@ -173,7 +174,7 @@ export const updateDataRows = async (req: FastifyRequest, rsp: FastifyReply) =>
                 sqlMessage: 'Could not match fingerprint',
                 sql: selectQuery,
               };
-              throw appErrors.mysql(mError);
+              throw mError;
             }
           } catch (e) {
             await sessionData.sqlSession.rollback();

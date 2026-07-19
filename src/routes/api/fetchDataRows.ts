@@ -67,7 +67,8 @@ export const fetchDataRows = async (req: FastifyRequest, rsp: FastifyReply) =>
       const sortByList = Array.isArray(sortBy) ? sortBy : undefined;
       const orderSql = sortByList?.length
         ? `ORDER BY ${sortByList.join(', ')}`
-        : '';
+        : `ORDER BY ${escapeId(columnsOrder[0])}`;
+
       const paginationSql = `LIMIT ? OFFSET ?`;
       const sql = `SELECT ${escapedColumns} FROM ${escapeId(database)}.${escapeId(table)} ${orderSql} ${paginationSql}`;
 

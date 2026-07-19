@@ -109,7 +109,7 @@ export const selectWithKeys = async ({
     originalRow,
     values: selectValues,
   });
-  const selectQuery = `${selectFirst} ${whereClause}`;
+  const selectQuery = `${selectFirst} WHERE ${whereClause}`;
   const [result] = await sessionData.sqlSession.query<RowDataPacket[]>(
     selectQuery,
     selectValues,
