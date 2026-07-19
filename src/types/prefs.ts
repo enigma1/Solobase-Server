@@ -26,19 +26,3 @@ export type SidebarVisibility = {
   sideQueries: boolean;
 };
 export type SidebarOptions = keyof SidebarVisibility;
-
-// export type StorageConfig = {
-//   hiddenColumns: Record<string, boolean>;
-//   sidebarVisibility: SidebarVisibility;
-//   headerVisibility: boolean;
-//   theme: string;
-//   sidebarWidth: number;
-//   backPort: number;
-//   frontPort: number;
-//   pageSizes: Record<PageListings, number>;
-// };
-
-// export type UserPrefs = StorageConfig & {
-//   queries: Record<string, QueryItem>;
-//   copiedRows: Record<string, SqlRow[]>;
-// };

@@ -11,7 +11,9 @@ export const envConfig = {
     ? {
         key: fs.readFileSync(getEnvKey('TLS_KEY') ?? ''),
         cert: fs.readFileSync(getEnvKey('TLS_CERT') ?? ''),
-        // passphrase: 'password', // certificate passowrd if used
+        ...(getEnvKey('TLS_PASSPHRASE')
+          ? { passphrase: getEnvKey('TLS_PASSPHRASE') }
+          : {}),
       }
     : undefined,
   cookieTimeout: 1000 * 3600 * 2, // 2 hours
