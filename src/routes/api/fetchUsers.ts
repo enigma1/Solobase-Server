@@ -1,13 +1,11 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
+import { apiCallAuth, getColumnsOrdered, buildPaging } from '>/services';
 import {
-  apiCallAuth,
-  getColumnsOrdered,
   basePaginationSchema,
   baseSortSchema,
   pageSizeValues,
-  buildPaging,
-} from '>/services';
+} from '>/contracts';
 import type { FetchUsersResponse, SqlQueryRow } from '>/types';
 
 const FetchUsersSchema = z.object({

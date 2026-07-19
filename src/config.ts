@@ -2,6 +2,8 @@ import { loadEnvFile } from 'node:process';
 import fs from 'fs';
 loadEnvFile();
 
+export const SOLOBASE_SERVER_VERSION = 1;
+
 export const getEnvKey = (k: string) => process.env[k];
 const useSsl = getEnvKey('SSL_ENABLED') === '1';
 export const envConfig = {

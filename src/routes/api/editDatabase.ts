@@ -7,8 +7,8 @@ import {
   charsetExists,
   dbNameAllowedChars,
   getDatabaseServerDefaults,
-  emptyToUndefined,
 } from '>/services';
+import { emptyToUndefined } from '>/contracts';
 import type { EditDatabaseResponse, EditDatabaseRequest } from '>/types';
 
 const EditDatabaseSchema = z.object({

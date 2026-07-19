@@ -1,7 +1,8 @@
 import type { ResultSetHeader, OkPacketParams } from 'mysql2/promise';
 import type { SqlColumns, CharsetMeta, StorageEngineMeta } from './mysql';
-import { SqlRow, SqlTransportObject, SqlTransportRow } from './db';
-import { GroupByModes } from '>/contracts';
+import type { SqlRow, SqlTransportObject, SqlTransportRow } from './db';
+// import type { UserPrefs } from './prefs';
+import type { GroupByModes, UserPrefs } from '>/contracts';
 
 export type SortBy = {
   column: string;
@@ -196,10 +197,8 @@ export type FetchDatabaseInfoResponse = {
 };
 
 export type SessionRestoreResponse = {
-  schemas: BasicRowsShape;
   username: string;
   dbSelected: string | null;
-  preferences: Record<string, any>;
 };
 
 export type UserShape = {
@@ -359,3 +358,18 @@ export type ImportDataRequest = {
 };
 
 export type ImportDataResponse = BasicResponse;
+
+export type SavePreferencesRequest = {
+  version: number;
+  userPrefs: UserPrefs;
+};
+
+export type SavePreferencesResponse = BasicResponse;
+
+export type LoadPreferencesRequest = {
+  user: string;
+};
+
+export type LoadPreferencesResponse = BasicResponse & {
+  userPrefs?: UserPrefs;
+};

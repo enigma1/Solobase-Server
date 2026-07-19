@@ -1,12 +1,8 @@
 import { type ResultSetHeader, escapeId } from 'mysql2';
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
-import {
-  apiCallAuth,
-  baseTableSchema,
-  ScalarSchema,
-  getRealColumns,
-} from '>/services';
+import { apiCallAuth, getRealColumns } from '>/services';
+import { baseTableSchema, ScalarSchema } from '>/contracts';
 import type { CreateDataRowsRequest, CreateDataRowsResponse } from '>/types';
 
 const InsertDataRowsSchema = z.object({

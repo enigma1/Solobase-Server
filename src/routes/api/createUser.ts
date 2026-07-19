@@ -1,12 +1,8 @@
 import { escape, ResultSetHeader } from 'mysql2';
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
-import {
-  apiCallAuth,
-  UserProfileSchema,
-  profileGrants,
-  emptyToUndefined,
-} from '>/services';
+import { apiCallAuth, profileGrants } from '>/services';
+import { UserProfileSchema, emptyToUndefined } from '>/contracts';
 import type { CreateUserResponse, CreateUserRequest } from '>/types';
 
 const CreateUserSchema = z.object({

@@ -24,8 +24,8 @@ import {
   deleteDataRows,
   updateDataRows,
   presence,
-  // savePreferences,
-  // loadPreferences,
+  savePreferences,
+  loadPreferences,
   runRawQuery,
   createTable,
   editTable,
@@ -77,6 +77,6 @@ export const routes = async (server: FastifyInstance) => {
   server.post('/db/get-table-details', getTableDetails);
   server.post('/db/get-table-columns-info', getTableColumnsInfo);
   server.get('/db/fetch-database-info', fetchDatabaseInfo);
-  // server.get('/app/load-preferences', loadPreferences);
-  // server.post('/app/save-preferences', savePreferences);
+  server.post('/app/load-preferences', loadPreferences);
+  server.post('/app/save-preferences', savePreferences);
 };

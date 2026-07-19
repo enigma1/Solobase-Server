@@ -5,13 +5,7 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 import { escapeId, type RowDataPacket } from 'mysql2';
 import { z } from 'zod';
 import { getEnvKey } from '>/config';
-import {
-  apiCallStream,
-  getDatabaseSchemaDetails,
-  dbNameAllowedChars,
-  getRealColumns,
-  buildFilename,
-} from '>/services';
+import { apiCallStream, getRealColumns, buildFilename } from '>/services';
 import type { ExportTablesRequest } from '>/types';
 
 const ExportTablesSchema = z.object({

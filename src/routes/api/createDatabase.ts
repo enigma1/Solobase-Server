@@ -1,12 +1,8 @@
 import { escapeId, ResultSetHeader } from 'mysql2/promise';
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
-import {
-  apiCallAuth,
-  collationExists,
-  charsetExists,
-  emptyToUndefined,
-} from '>/services';
+import { apiCallAuth, collationExists, charsetExists } from '>/services';
+import { emptyToUndefined } from '>/contracts';
 import type { CreateDatabaseResponse, CreateDatabaseRequest } from '>/types';
 
 const CreateDatabaseSchema = z

@@ -4,10 +4,9 @@ import {
   isObjectEmpty,
   indexBy,
   appErrors,
-  CommonBaseTableSchema,
   getRealColumns,
 } from '>/services';
-
+import { CommonBaseTableSchema } from '>/contracts';
 import type {
   GetTableColumnsInfoRequest,
   GetTableColumnsInfoResponse,

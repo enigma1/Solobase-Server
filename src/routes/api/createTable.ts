@@ -8,8 +8,8 @@ import {
   buildColumnsTransformer,
   buildKeysTransformer,
   appErrors,
-  CommonTableSchema,
 } from '>/services';
+import { CommonTableSchema } from '>/contracts';
 import type { CreateTableResponse, CreateTableRequest } from '>/types';
 
 const CreateTableSchema = CommonTableSchema;

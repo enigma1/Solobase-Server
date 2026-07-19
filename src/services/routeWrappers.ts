@@ -1,14 +1,27 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { CookieSerializeOptions } from '@fastify/cookie';
-import { hasObjectProps, errorResolver } from '>/services';
+import {
+  getCurrentTimestamp,
+  appErrors,
+  hasObjectProps,
+  errorResolver,
+} from '>/services';
 import { dbSession, sessionStore } from '>/db';
-import { getEnvKey, envConfig } from '>/config';
+import { SOLOBASE_SERVER_VERSION, getEnvKey, envConfig } from '>/config';
 import { ApiResponse, SessionData } from '>/types';
-import { getCurrentTimestamp, appErrors } from '>/services';
 
 const useSsl = getEnvKey('SSL_ENABLED') === '1';
 const useCookieDomain = getEnvKey('COOKIE_USE_DOMAIN') === '1';
 
+const processOrThrowVersion = (req: FastifyRequest) => {
+  const spaVersion = req.headers['solobase-spa-version'];
+  if (Number(spaVersion) !== SOLOBASE_SERVER_VERSION) {
+    throw appErrors.domain(
+      'version_not_supported',
+      `The current server version does not match the SoloBase-SPA`,
+    );
+  }
+};
 export const processOrThrowSession = (req: FastifyRequest): SessionData => {
   const sessionId = req.cookies?.sessionId;
 
@@ -145,6 +158,8 @@ export const apiCallAuth = async <T>({ req, rsp, fn }: ApiCallAuthProps<T>) =>
   handleApiFn(
     async () => {
       const sessionData = processOrThrowSession(req);
+      processOrThrowVersion(req);
+
       sessionData.lastSqlActivity = getCurrentTimestamp();
       rsp.setCookie(
         'sessionId',
@@ -181,6 +196,7 @@ export const apiCallUnknown = async <T>({
   handleApiFn(
     async () => {
       const res = await fn();
+      processOrThrowVersion(req);
 
       if (hasObjectProps(res, ['effects', ['sessionId']])) {
         const sessionId = res.effects?.sessionId;

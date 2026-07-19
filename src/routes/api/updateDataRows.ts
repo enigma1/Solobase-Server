@@ -12,9 +12,8 @@ import {
   selectWithKeys,
   whereWithKeys,
   whereWithValues,
-  baseTableSchema,
-  TokenRowSchema,
 } from '>/services';
+import { baseTableSchema, TokenRowSchema } from '>/contracts';
 
 import type {
   UpdateDataRowsResponse,

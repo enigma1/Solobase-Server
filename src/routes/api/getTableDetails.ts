@@ -1,11 +1,8 @@
 import { v4 as uuidv4 } from 'uuid';
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { SqlResult } from '@mysql/xdevapi';
-import {
-  apiCallAuth,
-  CommonBaseTableSchema,
-  parseColumnType,
-} from '>/services';
+import { apiCallAuth, parseColumnType } from '>/services';
+import { CommonBaseTableSchema } from '>/contracts';
 import type {
   GetTableDetailsRequest,
   GetTableDetailsResponse,

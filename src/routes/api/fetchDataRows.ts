@@ -2,19 +2,15 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 import { escapeId } from 'mysql2/promise';
 import { z } from 'zod';
 import { apiCallAuth, getColumnsOrdered } from '>/services';
-import {
-  appErrors,
-  fingerprint,
-  pageSizeValues,
-  buildPaging,
-} from '>/services';
+import { appErrors, fingerprint, hasIdentity, buildPaging } from '>/services';
 import { dbSession } from '>/db';
 import {
-  hasIdentity,
+  pageSizeValues,
   baseSortSchema,
   baseTableSchema,
   basePaginationSchema,
-} from '>/services';
+} from '>/contracts';
+
 import type {
   FetchRowsRequest,
   FetchRowsResponse,

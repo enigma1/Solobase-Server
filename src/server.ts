@@ -25,7 +25,7 @@ await server.register(fastifyCors, {
       }
     : getEnvKey('FRONTEND_ORIGIN'),
   credentials: true,
-  allowedHeaders: ['Content-Type', 'Authorization'], // include Content-Type
+  allowedHeaders: ['Content-Type', 'Authorization', 'Solobase-SPA-Version'], // include Content-Type
   exposedHeaders: ['Set-Cookie', 'Content-Disposition'],
   methods: ['GET', 'POST', 'OPTIONS'], // allow all used methods
 });

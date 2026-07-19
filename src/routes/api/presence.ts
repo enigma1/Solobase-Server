@@ -20,19 +20,16 @@ export const presence = async (req: FastifyRequest, rsp: FastifyReply) =>
           data: {
             ok: false,
             message: 'could not restore session',
-          } satisfies BasicResponse,
+          },
         };
       }
-      const schemas = await fetchDatabasesCommon(sessionData);
       const result = {
         effects: {
           sessionId: sessionData.sessionId,
         },
         data: {
-          schemas,
           username: sessionData.username,
           dbSelected: sessionData.dbSelected,
-          preferences: sessionData.preferences || {},
         } satisfies SessionRestoreResponse,
       };
       return result;

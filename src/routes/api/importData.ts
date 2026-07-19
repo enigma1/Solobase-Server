@@ -1,14 +1,10 @@
 import { RowDataPacket } from 'mysql2';
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
-import { dbSession } from '>/db/session';
-import {
-  apiCallAuth,
-  emptyToUndefined,
-  compatibleQueryExecution,
-} from '>/services';
+import { dbSession } from '>/db';
+import { apiCallAuth, compatibleQueryExecution } from '>/services';
+import { emptyToUndefined, GroupByModesSchema } from '>/contracts';
 import type { ImportDataResponse, ImportDataRequest } from '>/types';
-import { GroupByModesSchema } from '>/contracts';
 
 const ImportDataSchema = z.object({
   data: z.string().trim().min(4),

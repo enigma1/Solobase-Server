@@ -1,9 +1,8 @@
 import { z } from 'zod';
-import { sortByAllowedChars } from './apiHelpers';
+import { sortByAllowedChars } from '>/services';
 import { SqlTransportTypes } from '>/types';
-
-export const emptyToUndefined = (v: unknown) =>
-  typeof v === 'string' && v.trim() === '' ? undefined : v;
+import { sqlQueryModes, TableShapeKeyTypes, PageSizeSchema } from './defs';
+import { emptyToUndefined } from './helpers';
 
 export const TableShapeColumnSchema = z.object({
   // uid: z.string().min(1),
@@ -21,7 +20,7 @@ export const TableShapeColumnSchema = z.object({
 export const TableShapeKeySchema = z.object({
   // uid: z.string().min(1),
   signature: z.string().optional(),
-  type: z.enum(['PRIMARY', 'UNIQUE', 'INDEX', 'FOREIGN']),
+  type: TableShapeKeyTypes,
   name: z.string().optional(),
   columns: z.array(z.string().trim().min(1).max(64)).min(1),
 
@@ -44,9 +43,6 @@ export const baseTableSchema = {
   table: z.string().trim().min(1).max(64),
 };
 
-export const pageSizeValues = [5, 25, 50, 100, 250] as const;
-const PageSizeSchema = z.union(pageSizeValues.map((size) => z.literal(size)));
-
 export const basePaginationSchema = {
   paging: z
     .object({
@@ -65,14 +61,6 @@ export const CommonTableSchema = z.object({
   cols: z.array(TableShapeColumnSchema).min(1),
   keys: z.array(TableShapeKeySchema),
 });
-
-export const ScalarSchema = z.union([
-  z.string(),
-  z.number(),
-  z.boolean(),
-  z.null(),
-  z.record(z.string(), z.any()),
-]);
 
 export const UserProfileSchema = z.enum(['admin', 'editor', 'readOnly']);
 

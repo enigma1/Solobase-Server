@@ -3,7 +3,6 @@ import { escapeId, ResultSetHeader } from 'mysql2';
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import {
-  CommonTableSchema,
   apiCallAuth,
   collationExists,
   charsetExists,
@@ -13,6 +12,7 @@ import {
   buildKeyDefinition,
   buildDropKeyDefinition,
 } from '>/services';
+import { CommonTableSchema } from '>/contracts';
 import type {
   EditTableResponse,
   EditTableRequest,

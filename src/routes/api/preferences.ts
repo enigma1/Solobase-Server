@@ -1,35 +1,43 @@
-import { ExprOrLiteral } from '@mysql/xdevapi';
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
-import { apiCallAuth, withAppSession } from '>/services';
-import { dbSession } from '>/db';
-import type { PrimeObject, BasicResponse, ApiResponse } from '>/types';
+import {
+  apiCallAuth,
+  getPreferencesFilename,
+  getPreferencesPath,
+  savePreferencesFile,
+  loadPreferencesFile,
+} from '>/services';
+import { UserPrefsSchema } from '>/contracts';
 
+import type {
+  SavePreferencesResponse,
+  SavePreferencesRequest,
+  LoadPreferencesResponse,
+  LoadPreferencesRequest,
+  // UserPrefs,
+} from '>/types';
+
+const PreferencesSchema = z.object({
+  version: z.number().int().positive(),
+  userPrefs: UserPrefsSchema,
+});
 export const savePreferences = async (req: FastifyRequest, rsp: FastifyReply) =>
   apiCallAuth({
     req,
     rsp,
-    fn: async (sessionData): Promise<void> => {
-      const { preferences } = req.body as { preferences: PrimeObject };
-
-      // 1. update session
-      sessionData!.preferences = preferences;
-      dbSession.set(sessionData!.sessionId, sessionData!);
-
-      // 2. persist to DB
-      const info = await withAppSession(async (session) => {
-        const collection = session
-          .getSchema('db_manager')
-          .getCollection('preferences');
-        // collection.replaceOne(sessionData!.username, { preferences });
-        await collection
-          .modify('_id = :id')
-          // .set('preferences', JSON.parse(JSON.stringify(preferences)))
-          .set('preferences', structuredClone(preferences) as ExprOrLiteral)
-          .bind('id', sessionData!.username)
-          .execute();
+    fn: async (sessionData): Promise<SavePreferencesResponse> => {
+      const request = PreferencesSchema.parse(req.body);
+      const { version, userPrefs } = request;
+      const path = getPreferencesPath(sessionData.username);
+      await savePreferencesFile(path, {
+        version,
+        userPrefs,
       });
-      return info;
+
+      return {
+        ok: true,
+        message: `Preferences: saved successfully`,
+      };
     },
   });
 
@@ -37,7 +45,23 @@ export const loadPreferences = async (req: FastifyRequest, rsp: FastifyReply) =>
   apiCallAuth({
     req,
     rsp,
-    fn: async (sessionData): Promise<{ preferences: PrimeObject }> => {
-      return { preferences: sessionData!.preferences || {} };
+    fn: async (sessionData): Promise<LoadPreferencesResponse> => {
+      try {
+        const path = getPreferencesPath(sessionData.username);
+        const prefs = await loadPreferencesFile(path);
+        const parsed = UserPrefsSchema.parse(prefs.userPrefs);
+        return {
+          ok: true,
+          message: `Preferences loaded successfully`,
+          userPrefs: {
+            ...parsed,
+          },
+        };
+      } catch (e) {
+        return {
+          ok: false,
+          message: `Invalid or corrupted preferences - save preferences again`,
+        };
+      }
     },
   });

@@ -3,7 +3,6 @@ import { escapeId, ResultSetHeader, RowDataPacket } from 'mysql2/promise';
 import { z } from 'zod';
 import {
   apiCallAuth,
-  baseTableSchema,
   getColumnsOrdered,
   appErrors,
   buildKeyWhereClause,
@@ -11,9 +10,9 @@ import {
   whereWithKeys,
   whereWithValues,
   fingerprint,
-  TokenRowSchema,
 } from '>/services';
 import { dbSession } from '>/db';
+import { TokenRowSchema, baseTableSchema } from '>/contracts';
 import type {
   DeleteDataRowsRequest,
   DeleteDataRowsResponse,

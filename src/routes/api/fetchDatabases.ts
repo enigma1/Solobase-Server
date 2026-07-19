@@ -1,17 +1,10 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { RowDataPacket } from 'mysql2/promise';
 import { z } from 'zod';
-import {
-  apiCallAuth,
-  indexBy,
-  basePaginationSchema,
-  pageSizeValues,
-  buildPaging,
-} from '>/services';
+import { apiCallAuth, indexBy, buildPaging } from '>/services';
+import { basePaginationSchema, pageSizeValues } from '>/contracts';
 import {
   SessionData,
   SqlQueryRow,
-  SqlRow,
   SqlColumns,
   PagingRequest,
   FetchDatabasesResponse,
