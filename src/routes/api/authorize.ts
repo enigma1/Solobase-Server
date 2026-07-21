@@ -5,6 +5,8 @@ import {
   apiCallUnknown,
   getCapabilities,
   getCookieOptions,
+  getPreferencesPath,
+  loadPreferencesFile,
 } from '>/services';
 import { dbSession } from '>/db';
 import type {
@@ -56,9 +58,11 @@ export const login = async (req: FastifyRequest, rsp: FastifyReply) =>
       const sessionData = await dbSession.create(request);
       dbSession.set(sessionData.sessionId, sessionData);
       const capabilities = await getCapabilities(sessionData);
+      const path = getPreferencesPath(sessionData.username);
+      const prefs = await loadPreferencesFile(path);
       return {
         data: {
-          preferences: sessionData.preferences || {},
+          preferences: prefs || {},
           capabilities,
         },
         effects: {

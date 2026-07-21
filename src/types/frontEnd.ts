@@ -199,6 +199,8 @@ export type FetchDatabaseInfoResponse = {
 export type SessionRestoreResponse = {
   username: string;
   dbSelected: string | null;
+  preferences: Record<string, any>;
+  capabilities: string[];
 };
 
 export type UserShape = {

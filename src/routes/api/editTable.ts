@@ -132,6 +132,7 @@ export const editTable = async (req: FastifyRequest, rsp: FastifyReply) =>
         field: c.field,
         type: c.type,
         nullable: !!c.nullable,
+        params: c.params ?? {},
         defaultValue: c.defaultValue ?? null,
         autoIncrement: !!c.autoIncrement,
         unsigned: !!c.unsigned,

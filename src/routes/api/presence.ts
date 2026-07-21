@@ -1,11 +1,16 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { apiCallUnknown, getSessionFromRequest } from '>/services';
+import {
+  apiCallUnknown,
+  getSessionFromRequest,
+  getCapabilities,
+  getPreferencesPath,
+  loadPreferencesFile,
+} from '>/services';
 import type {
   ApiResponse,
   SessionRestoreResponse,
   BasicResponse,
 } from '>/types';
-import { fetchDatabasesCommon } from './fetchDatabases';
 
 export const presence = async (req: FastifyRequest, rsp: FastifyReply) =>
   apiCallUnknown({
@@ -23,6 +28,11 @@ export const presence = async (req: FastifyRequest, rsp: FastifyReply) =>
           },
         };
       }
+
+      const capabilities = await getCapabilities(sessionData);
+      const path = getPreferencesPath(sessionData.username);
+      const prefs = await loadPreferencesFile(path);
+
       const result = {
         effects: {
           sessionId: sessionData.sessionId,
@@ -30,6 +40,8 @@ export const presence = async (req: FastifyRequest, rsp: FastifyReply) =>
         data: {
           username: sessionData.username,
           dbSelected: sessionData.dbSelected,
+          preferences: prefs || {},
+          capabilities,
         } satisfies SessionRestoreResponse,
       };
       return result;
