@@ -1,0 +1,18 @@
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Push to Codeberg
+        run: |
+          git remote add codeberg https://marksamios:${{ secrets.CODEBERG_TOKEN }}@codeberg.org/marksamios/Solobase-Server.git
+          git push codeberg --mirror
