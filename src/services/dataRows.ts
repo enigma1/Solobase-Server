@@ -7,6 +7,18 @@ import type {
   SessionData,
 } from '>/types';
 
+const isSpatial = (type: string) =>
+  [
+    'point',
+    'linestring',
+    'polygon',
+    'multipoint',
+    'multilinestring',
+    'multipolygon',
+    'geometry',
+    'geometrycollection',
+  ].includes(type.toLowerCase());
+
 export const isBinary = (type: string) => {
   return (
     type.startsWith('binary') ||
@@ -136,4 +148,117 @@ export const whereWithKeys = ({
     originalRow: row.originalRow as SqlTransportRow,
     values,
   });
+};
+
+type SqlValueMapper = {
+  sql: string;
+  transform?: CallableFunction;
+};
+
+const valueRemappers: Record<string, SqlValueMapper> = {
+  json: {
+    sql: 'CAST(? AS JSON)',
+    transform: JSON.stringify,
+  },
+  point: {
+    sql: 'ST_GeomFromText(?)',
+    transform: (value: any) => `POINT(${value.x} ${value.y})`,
+  },
+  linestring: {
+    sql: 'ST_GeomFromText(?)',
+    transform: (value: { x: number; y: number }[]) =>
+      `LINESTRING(${value.map((p) => `${p.x} ${p.y}`).join(', ')})`,
+  },
+
+  polygon: {
+    sql: 'ST_GeomFromText(?)',
+    transform: (value: { x: number; y: number }[][]) =>
+      `POLYGON(${value
+        .map((ring) => `(${ring.map((p) => `${p.x} ${p.y}`).join(', ')})`)
+        .join(', ')})`,
+  },
+
+  multipoint: {
+    sql: 'ST_GeomFromText(?)',
+    transform: (value: Record<'x' | 'y', number>[]) =>
+      `MULTIPOINT(${value.map((p) => `${p.x} ${p.y}`).join(', ')})`,
+  },
+
+  multilinestring: {
+    sql: 'ST_GeomFromText(?)',
+    transform: (value: Record<'x' | 'y', number>[][]) =>
+      `MULTILINESTRING(${value
+        .map((line) => `(${line.map((p) => `${p.x} ${p.y}`).join(', ')})`)
+        .join(', ')})`,
+  },
+  multipolygon: {
+    sql: 'ST_GeomFromText(?)',
+    transform: (value: Record<'x' | 'y', number>[][][]) =>
+      `MULTIPOLYGON(${value
+        .map(
+          (polygon) =>
+            `(${polygon
+              .map((ring) => `(${ring.map((p) => `${p.x} ${p.y}`).join(', ')})`)
+              .join(', ')})`,
+        )
+        .join(', ')})`,
+  },
+  geometry: {
+    sql: 'ST_GeomFromText(?)',
+    // transform: (value: Record<string, unknown>) => value,
+  },
+  date: {
+    sql: '?',
+    // sql: 'STR_TO_DATE(?)',
+  },
+  binary: {
+    sql: '?',
+    transform: (value: any) => {
+      if (Buffer.isBuffer(value)) {
+        return value;
+      }
+
+      return Buffer.from(value.data);
+    },
+  },
+};
+
+const getValueMapper = (type: string) => {
+  const lType = type.toLowerCase();
+
+  if (isBinary(lType)) {
+    return valueRemappers.binary;
+  }
+
+  return valueRemappers[lType];
+};
+
+const isEmptyObjectValue = (value: unknown) => {
+  if (value === null || value === undefined) return true;
+
+  if (Array.isArray(value) && value.length === 0) return true;
+
+  if (
+    typeof value === 'object' &&
+    !Buffer.isBuffer(value) &&
+    Object.keys(value as object).length === 0
+  ) {
+    return true;
+  }
+
+  return false;
+};
+
+export const remapSqlValue = (type: string) => getValueMapper(type)?.sql ?? '?';
+
+export const transformSqlValue = (type: string, value: unknown) => {
+  if (value === null) {
+    return null;
+  }
+  if (isSpatial(type) && isEmptyObjectValue(value)) {
+    return null;
+  }
+  const mapper = getValueMapper(type);
+
+  return mapper?.transform ? mapper.transform(value) : value;
 };

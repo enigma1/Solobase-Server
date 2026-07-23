@@ -5,6 +5,7 @@ import {
   appErrors,
   hasObjectProps,
   errorResolver,
+  saveMockResponse,
 } from '>/services';
 import { dbSession, sessionStore } from '>/db';
 import { SOLOBASE_SERVER_VERSION, getEnvKey, envConfig } from '>/config';
@@ -69,6 +70,15 @@ const handleApiFn = async <T>(
     }
 
     const result = await fn();
+    const mockDir = getEnvKey('MOCK_OUTPUT_DIR');
+    if (mockDir) {
+      await saveMockResponse({
+        req,
+        rsp: result,
+        outputDir: mockDir,
+      });
+    }
+
     if (mode === 'stream') return;
 
     return {

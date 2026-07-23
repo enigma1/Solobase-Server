@@ -27,6 +27,10 @@ export const savePreferencesFile = async (filename: string, data: unknown) => {
 };
 
 export const loadPreferencesFile = async (path: string) => {
-  const text = await readFile(path, 'utf8');
-  return JSON.parse(text);
+  try {
+    const text = await readFile(path, 'utf8');
+    return JSON.parse(text);
+  } catch (e: any) {
+    return;
+  }
 };

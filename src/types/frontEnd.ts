@@ -98,7 +98,7 @@ export type UserCapabilities = {
 
 export type CleanupResponse = BasicResponse;
 
-export type LoginResponse = {
+export type LoginResponse = BasicResponse & {
   preferences: Record<string, any>;
   capabilities: string[];
 };

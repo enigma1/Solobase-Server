@@ -12,6 +12,8 @@ import {
   selectWithKeys,
   whereWithKeys,
   whereWithValues,
+  transformSqlValue,
+  remapSqlValue,
 } from '>/services';
 import { baseTableSchema, TokenRowSchema } from '>/contracts';
 
@@ -74,20 +76,8 @@ export const updateDataRows = async (req: FastifyRequest, rsp: FastifyReply) =>
               return `${escapeId(col)} = CAST(? AS JSON)`;
             }
 
-            if (
-              isBinary(type) &&
-              val &&
-              typeof val === 'object' &&
-              !Buffer.isBuffer(val) &&
-              'type' in val &&
-              (val as any).type === 'Buffer'
-            ) {
-              values.push(Buffer.from((val as any).data));
-              return `${escapeId(col)} = ?`;
-            }
-
-            values.push(val);
-            return `${escapeId(col)} = ?`;
+            values.push(transformSqlValue(type, val));
+            return `${escapeId(col)} = ${remapSqlValue(type)}`;
           })
           .join(', ');
 

@@ -1,7 +1,12 @@
 import { type ResultSetHeader, escapeId } from 'mysql2';
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
-import { apiCallAuth, getRealColumns } from '>/services';
+import {
+  apiCallAuth,
+  getRealColumns,
+  remapSqlValue,
+  transformSqlValue,
+} from '>/services';
 import { baseTableSchema, ScalarSchema } from '>/contracts';
 import type { CreateDataRowsRequest, CreateDataRowsResponse } from '>/types';
 
@@ -29,20 +34,22 @@ export const createDataRows = async (req: FastifyRequest, rsp: FastifyReply) =>
         .join(', ');
 
       const valuesSql = rows
-        .map((row) => `(${row.map(() => '?').join(', ')})`)
+        .map(
+          (row) =>
+            `(${row
+              .map((_, index) => remapSqlValue(cols[index].type))
+              .join(', ')})`,
+        )
         .join(',\n');
 
       const sql = `INSERT INTO ${escapeId(database)}.${escapeId(table)} (${escapedColumns}) VALUES ${valuesSql}`;
       const params = rows.flatMap((row) =>
         row.map((value, index) => {
           const column = cols[index];
-          if (column.type.toLowerCase() === 'json' && value !== null) {
-            return JSON.stringify(value);
-          }
-
-          return value;
+          return transformSqlValue(column.type, value);
         }),
       );
+
       const [result] = await sessionData.sqlSession.query<ResultSetHeader>(
         sql,
         params,

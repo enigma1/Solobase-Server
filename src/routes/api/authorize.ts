@@ -62,6 +62,8 @@ export const login = async (req: FastifyRequest, rsp: FastifyReply) =>
       const prefs = await loadPreferencesFile(path);
       return {
         data: {
+          ok: prefs ?? false,
+          message: 'Logged in',
           preferences: prefs || {},
           capabilities,
         },
