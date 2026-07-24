@@ -5,7 +5,13 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 import { escapeId, type RowDataPacket } from 'mysql2';
 import { z } from 'zod';
 import { getEnvKey } from '>/config';
-import { apiCallStream, getRealColumns, buildFilename } from '>/services';
+import {
+  apiCallStream,
+  getRealColumns,
+  buildFilename,
+  exportSqlValue,
+  isSpatial,
+} from '>/services';
 import type { ExportTablesRequest } from '>/types';
 
 const ExportTablesSchema = z.object({
@@ -66,16 +72,26 @@ export const exportTables = async (req: FastifyRequest, rsp: FastifyReply) =>
           const createSql = tableDetailRows[0]['Create Table'].trimEnd();
           gzip.write(`${createSql};\n\n`);
 
-          const sql = `SELECT * FROM ${escapedDatabase}.${escapedTable}`;
-          const stream: Readable = sessionData.streamSession
-            .query(sql)
-            .stream();
-
           const realColumns = await getRealColumns({
             sessionData,
             table: tableName,
-            database: database,
+            database,
           });
+
+          const selectColumns = realColumns
+            .map((col) => {
+              if (isSpatial(col.type)) {
+                return `ST_AsText(${escapeId(col.field)}) AS ${escapeId(col.field)}`;
+              }
+              return escapeId(col.field);
+            })
+            .join(', ');
+
+          const sql = `SELECT ${selectColumns} FROM ${escapedDatabase}.${escapedTable}`;
+
+          const stream: Readable = sessionData.streamSession
+            .query(sql)
+            .stream();
 
           const columnNamesSql = realColumns
             .map((col) => escapeId(col.field))
@@ -83,11 +99,25 @@ export const exportTables = async (req: FastifyRequest, rsp: FastifyReply) =>
 
           for await (const row of stream) {
             const values = realColumns
-              .map((col) => escape(row[col.field]))
+              .map((col) => {
+                const value = row[col.field];
+                if (col.type.toLowerCase() === 'json') {
+                  return value === null
+                    ? 'NULL'
+                    : `CAST(${escape(JSON.stringify(value))} AS JSON)`;
+                }
+
+                if (isSpatial(col.type) && typeof value === 'string') {
+                  return value === null
+                    ? 'NULL'
+                    : `ST_GeomFromText(${escape(value)})`;
+                }
+                return exportSqlValue(col.type, value);
+              })
               .join(', ');
 
             gzip.write(
-              `INSERT INTO ${escapedDatabase}.${escapedTable} (${columnNamesSql}) VALUES (${values});\n`,
+              `INSERT INTO ${escapedTable} (${columnNamesSql}) VALUES (${values});\n`,
             );
           }
           gzip.write('\n');

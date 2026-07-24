@@ -1,5 +1,5 @@
 import { escapeId, RowDataPacket } from 'mysql2/promise';
-
+import { appErrors } from './errorLayer';
 import type {
   ChangedRow,
   SqlColumnsShape,
@@ -7,7 +7,7 @@ import type {
   SessionData,
 } from '>/types';
 
-const isSpatial = (type: string) =>
+export const isSpatial = (type: string) =>
   [
     'point',
     'linestring',
@@ -16,7 +16,7 @@ const isSpatial = (type: string) =>
     'multilinestring',
     'multipolygon',
     'geometry',
-    'geometrycollection',
+    'geomcollection',
   ].includes(type.toLowerCase());
 
 export const isBinary = (type: string) => {
@@ -150,11 +150,46 @@ export const whereWithKeys = ({
   });
 };
 
+const createGeometryError = (type: string) => {
+  return {
+    errno: 0,
+    code: 'invalid_geometry',
+    sqlState: '0',
+    sqlMessage:
+      'Geometry type is missing or no transformer available for the given type',
+    sql: type,
+  };
+};
+
+const geoPrimitiveTransformers: Record<string, CallableFunction> = {
+  point: (value: any) => `POINT(${value.x} ${value.y})`,
+  linestring: (value: { x: number; y: number }[]) =>
+    `LINESTRING(${value.map((p) => `${p.x} ${p.y}`).join(', ')})`,
+  polygon: (value: { x: number; y: number }[][]) =>
+    `POLYGON(${value
+      .map((ring) => `(${ring.map((p) => `${p.x} ${p.y}`).join(', ')})`)
+      .join(', ')})`,
+  multipoint: (value: Record<'x' | 'y', number>[]) =>
+    `MULTIPOINT(${value.map((p) => `${p.x} ${p.y}`).join(', ')})`,
+  multilinestring: (value: Record<'x' | 'y', number>[][]) =>
+    `MULTILINESTRING(${value
+      .map((line) => `(${line.map((p) => `${p.x} ${p.y}`).join(', ')})`)
+      .join(', ')})`,
+  multipolygon: (value: Record<'x' | 'y', number>[][][]) =>
+    `MULTIPOLYGON(${value
+      .map(
+        (polygon) =>
+          `(${polygon
+            .map((ring) => `(${ring.map((p) => `${p.x} ${p.y}`).join(', ')})`)
+            .join(', ')})`,
+      )
+      .join(', ')})`,
+};
+
 type SqlValueMapper = {
   sql: string;
   transform?: CallableFunction;
 };
-
 const valueRemappers: Record<string, SqlValueMapper> = {
   json: {
     sql: 'CAST(? AS JSON)',
@@ -162,51 +197,59 @@ const valueRemappers: Record<string, SqlValueMapper> = {
   },
   point: {
     sql: 'ST_GeomFromText(?)',
-    transform: (value: any) => `POINT(${value.x} ${value.y})`,
+    transform: geoPrimitiveTransformers.point,
   },
   linestring: {
     sql: 'ST_GeomFromText(?)',
-    transform: (value: { x: number; y: number }[]) =>
-      `LINESTRING(${value.map((p) => `${p.x} ${p.y}`).join(', ')})`,
+    transform: geoPrimitiveTransformers.linestring,
   },
-
   polygon: {
     sql: 'ST_GeomFromText(?)',
-    transform: (value: { x: number; y: number }[][]) =>
-      `POLYGON(${value
-        .map((ring) => `(${ring.map((p) => `${p.x} ${p.y}`).join(', ')})`)
-        .join(', ')})`,
+    transform: geoPrimitiveTransformers.polygon,
   },
-
   multipoint: {
     sql: 'ST_GeomFromText(?)',
-    transform: (value: Record<'x' | 'y', number>[]) =>
-      `MULTIPOINT(${value.map((p) => `${p.x} ${p.y}`).join(', ')})`,
+    transform: geoPrimitiveTransformers.multipoint,
   },
-
   multilinestring: {
     sql: 'ST_GeomFromText(?)',
-    transform: (value: Record<'x' | 'y', number>[][]) =>
-      `MULTILINESTRING(${value
-        .map((line) => `(${line.map((p) => `${p.x} ${p.y}`).join(', ')})`)
-        .join(', ')})`,
+    transform: geoPrimitiveTransformers.multilinestring,
   },
   multipolygon: {
     sql: 'ST_GeomFromText(?)',
-    transform: (value: Record<'x' | 'y', number>[][][]) =>
-      `MULTIPOLYGON(${value
-        .map(
-          (polygon) =>
-            `(${polygon
-              .map((ring) => `(${ring.map((p) => `${p.x} ${p.y}`).join(', ')})`)
-              .join(', ')})`,
-        )
-        .join(', ')})`,
+    transform: geoPrimitiveTransformers.multipolygon,
   },
   geometry: {
     sql: 'ST_GeomFromText(?)',
-    // transform: (value: Record<string, unknown>) => value,
+    transform: (geometry: any) => {
+      const gType = geometry.type.toLowerCase();
+      const convert = geoPrimitiveTransformers[gType];
+
+      if (!convert) {
+        throw appErrors.mysql(createGeometryError(gType));
+      }
+
+      return convert(geometry.value);
+    },
   },
+  geomcollection: {
+    sql: 'ST_GeomFromText(?)',
+    transform: (geometry: any) => {
+      const geometries = geometry.value;
+      return `GEOMETRYCOLLECTION(${geometries
+        .map((g: any) => {
+          const convert = geoPrimitiveTransformers[g.type.toLowerCase()];
+
+          if (!convert) {
+            throw appErrors.mysql(createGeometryError(g.type));
+          }
+
+          return convert(g.value);
+        })
+        .join(', ')})`;
+    },
+  },
+
   date: {
     sql: '?',
     // sql: 'STR_TO_DATE(?)',
@@ -223,7 +266,7 @@ const valueRemappers: Record<string, SqlValueMapper> = {
   },
 };
 
-const getValueMapper = (type: string) => {
+export const getValueMapper = (type: string) => {
   const lType = type.toLowerCase();
 
   if (isBinary(lType)) {

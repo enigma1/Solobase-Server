@@ -11,6 +11,8 @@ import {
   dbNameAllowedChars,
   getRealColumns,
   buildFilename,
+  exportSqlValue,
+  isSpatial,
 } from '>/services';
 import type { ExportDatabasesRequest, ExportDatabasesResponse } from '>/types';
 
@@ -100,16 +102,26 @@ export const exportDatabases = async (req: FastifyRequest, rsp: FastifyReply) =>
             //     })
             //     .join(', ');
 
-            const sql = `SELECT * FROM ${escapedName}.${escapedTable}`;
-            const stream: Readable = sessionData.streamSession
-              .query(sql)
-              .stream();
-
             const realColumns = await getRealColumns({
               sessionData,
               table: tableName,
               database: dbName,
             });
+
+            const selectColumns = realColumns
+              .map((col) => {
+                if (isSpatial(col.type)) {
+                  return `ST_AsText(${escapeId(col.field)}) AS ${escapeId(col.field)}`;
+                }
+                return escapeId(col.field);
+              })
+              .join(', ');
+
+            const sql = `SELECT ${selectColumns} FROM ${escapedName}.${escapedTable}`;
+
+            const stream: Readable = sessionData.streamSession
+              .query(sql)
+              .stream();
 
             const columnNamesSql = realColumns
               .map((col) => escapeId(col.field))
@@ -117,11 +129,26 @@ export const exportDatabases = async (req: FastifyRequest, rsp: FastifyReply) =>
 
             for await (const row of stream) {
               const values = realColumns
-                .map((col) => escape(row[col.field]))
+                .map((col) => {
+                  const value = row[col.field];
+
+                  if (col.type.toLowerCase() === 'json') {
+                    return value === null
+                      ? 'NULL'
+                      : `CAST(${escape(JSON.stringify(value))} AS JSON)`;
+                  }
+
+                  if (isSpatial(col.type) && typeof value === 'string') {
+                    return value === null
+                      ? 'NULL'
+                      : `ST_GeomFromText(${escape(value)})`;
+                  }
+                  return exportSqlValue(col.type, value);
+                })
                 .join(', ');
 
               gzip.write(
-                `INSERT INTO ${escapedName}.${escapedTable} (${columnNamesSql}) VALUES (${values});\n`,
+                `INSERT INTO ${escapedTable} (${columnNamesSql}) VALUES (${values});\n`,
               );
             }
           }

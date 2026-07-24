@@ -1,5 +1,5 @@
-import type { RowDataPacket } from 'mysql2/promise';
-import type { Connection } from 'mysql2/promise';
+import type { RowDataPacket, Connection } from 'mysql2/promise';
+import { escape } from 'mysql2';
 import {
   CharsetMeta,
   MySqlCaps,
@@ -9,6 +9,7 @@ import {
   CollationRow,
   UserProfile,
 } from '>/types';
+import { getValueMapper, transformSqlValue } from './dataRows';
 
 export const getMysqlCapabilities = async (
   sqlSession: Connection,
@@ -157,3 +158,15 @@ export const systemDatabases = new Set([
 
 export const isSystemDatabase = (name: string) =>
   systemDatabases.has(name.toLowerCase());
+
+export const exportSqlValue = (type: string, value: any) => {
+  const mapper = getValueMapper(type);
+
+  if (mapper?.sql === 'ST_GeomFromText(?)') {
+    const wkt = transformSqlValue(type, value);
+
+    return wkt === null ? 'NULL' : `ST_GeomFromText(${escape(wkt)})`;
+  }
+
+  return escape(value);
+};
