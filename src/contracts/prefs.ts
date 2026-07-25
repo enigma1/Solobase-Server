@@ -34,6 +34,7 @@ const StorageConfigSchema = z.object({
   frontPort: z.number().int(),
   pageSizes: z.record(PageListingsSchema, PageSizeSchema),
   allowSystemDatabases: z.boolean().optional(),
+  objectEditorForJson: z.boolean().optional(),
 });
 
 export const UserPrefsSchema = StorageConfigSchema.extend({
