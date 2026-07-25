@@ -108,6 +108,7 @@ const create = async (request: LoginRequest): Promise<SessionData> => {
     queries: logger.queries,
     lastSqlActivity: getCurrentTimestamp(),
     dateMarked: getCurrentTimestamp(),
+    allowSystemDatabases: false,
   };
 
   const columns = await getRealColumns({

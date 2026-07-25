@@ -1,6 +1,6 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
-import { apiCallAuth, indexBy, buildPaging } from '>/services';
+import { apiCallAuth, indexBy, buildPaging, systemDatabases } from '>/services';
 import { basePaginationSchema, pageSizeValues } from '>/contracts';
 import {
   SessionData,
@@ -25,11 +25,20 @@ export const fetchDatabasesCommon = async (
     'field',
   );
 
-  const sql = `SELECT * FROM information_schema.SCHEMATA LIMIT ? OFFSET ?`;
-  const [rowObjects] = await sessionData.sqlSession.query<SqlQueryRow[]>(sql, [
-    limit + 1,
-    offset,
-  ]);
+  const systemDbNames = [...systemDatabases];
+  const whereClause = sessionData.allowSystemDatabases
+    ? ''
+    : `WHERE SCHEMA_NAME NOT IN (${systemDbNames.map(() => '?').join(', ')})`;
+
+  const sql = `SELECT * FROM information_schema.SCHEMATA ${whereClause} LIMIT ? OFFSET ?`;
+  const params = sessionData.allowSystemDatabases
+    ? [limit + 1, offset]
+    : [...systemDbNames, limit + 1, offset];
+
+  const [rowObjects] = await sessionData.sqlSession.query<SqlQueryRow[]>(
+    sql,
+    params,
+  );
 
   const rowsPageResult = buildPaging({
     columnsOrder,
@@ -50,6 +59,7 @@ export const fetchDatabasesCommon = async (
 
 const FetchDatabasesSchema = z.object({
   ...basePaginationSchema,
+  system: z.boolean().optional(),
 });
 
 export const fetchDatabases = async (req: FastifyRequest, rsp: FastifyReply) =>

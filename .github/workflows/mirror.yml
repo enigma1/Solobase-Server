@@ -8,11 +8,30 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Push to Codeberg
         run: |
+          git clone --mirror https://github.com/enigma1/Solobase-Server.git mirror.git
+          cd mirror.git
           git remote add codeberg https://marksamios:${{ secrets.CODEBERG_TOKEN }}@codeberg.org/marksamios/Solobase-Server.git
-          git push codeberg --mirror
+          git push codeberg +refs/heads/*:refs/heads/* +refs/tags/*:refs/tags/*
+
+      - name: Push to GitLab
+        run: |
+          rm -rf mirror.git
+          git clone --mirror https://github.com/enigma1/Solobase-Server.git mirror.git
+          cd mirror.git
+          git remote add gitlab https://oauth2:${{ secrets.GITLAB_TOKEN }}@gitlab.com/Enigma1R/Solobase-Server.git
+          git push gitlab +refs/heads/*:refs/heads/* +refs/tags/*:refs/tags/*
+
+      - name: Push to Bitbucket
+        run: |
+          rm -rf mirror.git
+          git clone --mirror https://github.com/enigma1/Solobase-Server.git mirror.git
+          cd mirror.git
+          git remote add bitbucket https://enigmajs:${{ secrets.BITBUCKET_TOKEN }}@bitbucket.org/enigmajs/solobase-server.git
+          git push bitbucket +refs/heads/*:refs/heads/* +refs/tags/*:refs/tags/*

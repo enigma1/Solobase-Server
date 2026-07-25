@@ -55,6 +55,7 @@ export type SessionData = MySqlCaps & {
   queries: QueryLogEntry[];
   lastSqlActivity: number;
   dateMarked: number;
+  allowSystemDatabases: boolean;
 };
 
 export type EngineRow = RowDataPacket & {

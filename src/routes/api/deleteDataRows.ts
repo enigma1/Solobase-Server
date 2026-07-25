@@ -60,6 +60,7 @@ export const deleteDataRows = async (req: FastifyRequest, rsp: FastifyReply) =>
         let whereClause;
         if (keyColumns.length > 0) {
           whereClause = buildKeyWhereClause({
+            cols,
             keyColumns,
             columnsOrder,
             originalRow: row.originalRow as SqlTransportRow,
@@ -101,15 +102,17 @@ export const deleteDataRows = async (req: FastifyRequest, rsp: FastifyReply) =>
 
             if (sFingerprint === row.rowToken?.fingerprint) {
               const withKeys = await selectWithKeys({
+                cols,
+                columnsOrder,
                 selectFirst,
                 allKeys,
-                columnsOrder,
                 originalRow: row.originalRow as SqlTransportRow,
                 sessionData,
               });
 
               if (withKeys) {
                 whereClause = whereWithKeys({
+                  cols,
                   allKeys,
                   row: row as ChangedRow,
                   columnsOrder,

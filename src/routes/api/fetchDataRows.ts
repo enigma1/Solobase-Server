@@ -2,7 +2,13 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 import { escapeId } from 'mysql2/promise';
 import { z } from 'zod';
 import { apiCallAuth, getColumnsOrdered } from '>/services';
-import { appErrors, fingerprint, hasIdentity, buildPaging } from '>/services';
+import {
+  appErrors,
+  fingerprint,
+  hasIdentity,
+  buildPaging,
+  isSpatial,
+} from '>/services';
 import { dbSession } from '>/db';
 import {
   pageSizeValues,
@@ -62,8 +68,17 @@ export const fetchDataRows = async (req: FastifyRequest, rsp: FastifyReply) =>
       }
 
       const escapedColumns = columnsOrder
-        .map((col) => escapeId(col))
+        .map((col) => {
+          const type = cols[col].type.toLowerCase();
+
+          if (isSpatial(type)) {
+            return `ST_AsGeoJSON(${escapeId(col)}) AS ${escapeId(col)}`;
+          }
+
+          return escapeId(col);
+        })
         .join(', ');
+
       const sortByList = Array.isArray(sortBy) ? sortBy : undefined;
       const orderSql = sortByList?.length
         ? `ORDER BY ${sortByList.join(', ')}`

@@ -46,7 +46,8 @@ export const createDataRows = async (req: FastifyRequest, rsp: FastifyReply) =>
       const params = rows.flatMap((row) =>
         row.map((value, index) => {
           const column = cols[index];
-          return transformSqlValue(column.type, value);
+          const transformed = transformSqlValue(column.type, value);
+          return transformed;
         }),
       );
 

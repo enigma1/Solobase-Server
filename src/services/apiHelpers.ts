@@ -112,6 +112,7 @@ export const getRealColumns = async ({
   const columnsSql = `
     SELECT
       COLUMN_NAME,
+      DATA_TYPE,
       COLUMN_TYPE,
       IS_NULLABLE,
       COLUMN_DEFAULT,

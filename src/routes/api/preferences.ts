@@ -28,6 +28,8 @@ export const savePreferences = async (req: FastifyRequest, rsp: FastifyReply) =>
     fn: async (sessionData): Promise<SavePreferencesResponse> => {
       const request = PreferencesSchema.parse(req.body);
       const { version, userPrefs } = request;
+      sessionData.allowSystemDatabases =
+        userPrefs.allowSystemDatabases ?? false;
       const path = getPreferencesPath(sessionData.username);
       await savePreferencesFile(path, {
         version,
@@ -50,6 +52,8 @@ export const loadPreferences = async (req: FastifyRequest, rsp: FastifyReply) =>
         const path = getPreferencesPath(sessionData.username);
         const prefs = await loadPreferencesFile(path);
         const parsed = UserPrefsSchema.parse(prefs.userPrefs);
+        sessionData.allowSystemDatabases = parsed.allowSystemDatabases ?? false;
+
         return {
           ok: true,
           message: `Preferences loaded successfully`,

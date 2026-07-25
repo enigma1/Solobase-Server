@@ -1,6 +1,7 @@
 export type ColumnsRow = {
   COLUMN_NAME: string;
   COLUMN_TYPE: string;
+  DATA_TYPE: string;
   IS_NULLABLE: 'YES' | 'NO';
   COLUMN_DEFAULT: string | null;
   EXTRA: string;

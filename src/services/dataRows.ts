@@ -28,6 +28,7 @@ export const isBinary = (type: string) => {
 };
 
 type BuildKeyWhereClauseProps = {
+  cols: SqlColumnsShape;
   keyColumns: string[];
   columnsOrder: string[];
   originalRow: SqlTransportRow;
@@ -35,34 +36,36 @@ type BuildKeyWhereClauseProps = {
 };
 
 export const buildKeyWhereClause = ({
-  keyColumns,
+  cols,
   columnsOrder,
   originalRow,
+  keyColumns,
   values,
 }: BuildKeyWhereClauseProps) => {
-  const result = keyColumns
+  return keyColumns
     .map((column) => {
       const index = columnsOrder.indexOf(column);
-      const value = originalRow[index];
+      const type = cols[column].type;
+      const value = transformSqlValue(type, originalRow[index]);
 
       values.push(value);
+
       return `${escapeId(column)} = ?`;
     })
     .join(' AND ');
-  return result;
 };
 
 type WhereWithValuesProps = {
-  row: ChangedRow;
-  columnsOrder: string[];
   cols: SqlColumnsShape;
+  columnsOrder: string[];
+  row: ChangedRow;
   values: unknown[];
 };
 
 export const whereWithValues = ({
-  row,
-  columnsOrder,
   cols,
+  columnsOrder,
+  row,
   values,
 }: WhereWithValuesProps) => {
   const result = row.originalRow
@@ -74,41 +77,32 @@ export const whereWithValues = ({
         return `${escapeId(col)} IS NULL`;
       }
 
+      values.push(transformSqlValue(type, val));
+
       if (type.startsWith('json')) {
-        values.push(JSON.stringify(val));
         return `${escapeId(col)} = CAST(? AS JSON)`;
       }
 
-      if (
-        isBinary(type) &&
-        val &&
-        typeof val === 'object' &&
-        !Buffer.isBuffer(val) &&
-        'type' in val &&
-        (val as any).type === 'Buffer'
-      ) {
-        values.push(Buffer.from((val as any).data));
-        return `${escapeId(col)} = ?`;
-      }
-
-      values.push(val);
       return `${escapeId(col)} = ?`;
     })
     .join(' AND ');
+
   return result;
 };
 
 type SelectWithKeysProps = {
+  cols: SqlColumnsShape;
+  columnsOrder: string[];
   selectFirst: string;
   allKeys: string[];
-  columnsOrder: string[];
   originalRow: SqlTransportRow;
   sessionData: SessionData;
 };
 export const selectWithKeys = async ({
+  cols,
+  columnsOrder,
   selectFirst,
   allKeys,
-  columnsOrder,
   originalRow,
   sessionData,
 }: SelectWithKeysProps) => {
@@ -116,8 +110,9 @@ export const selectWithKeys = async ({
   const selectValues: unknown[] = [];
 
   const whereClause = buildKeyWhereClause({
-    keyColumns: allKeys,
+    cols,
     columnsOrder,
+    keyColumns: allKeys,
     originalRow,
     values: selectValues,
   });
@@ -130,6 +125,7 @@ export const selectWithKeys = async ({
 };
 
 type WhereWithKeysProps = {
+  cols: SqlColumnsShape;
   row: ChangedRow;
   columnsOrder: string[];
   values: unknown[];
@@ -137,14 +133,16 @@ type WhereWithKeysProps = {
 };
 
 export const whereWithKeys = ({
-  row,
+  cols,
   columnsOrder,
+  row,
   values,
   allKeys,
 }: WhereWithKeysProps) => {
   return buildKeyWhereClause({
-    keyColumns: allKeys,
+    cols,
     columnsOrder,
+    keyColumns: allKeys,
     originalRow: row.originalRow as SqlTransportRow,
     values,
   });
@@ -162,28 +160,58 @@ const createGeometryError = (type: string) => {
 };
 
 const geoPrimitiveTransformers: Record<string, CallableFunction> = {
-  point: (value: any) => `POINT(${value.x} ${value.y})`,
-  linestring: (value: { x: number; y: number }[]) =>
-    `LINESTRING(${value.map((p) => `${p.x} ${p.y}`).join(', ')})`,
-  polygon: (value: { x: number; y: number }[][]) =>
-    `POLYGON(${value
-      .map((ring) => `(${ring.map((p) => `${p.x} ${p.y}`).join(', ')})`)
+  point: (geometry: { coordinates: [number, number] }) => {
+    const [x, y] = geometry.coordinates;
+    return `POINT(${x} ${y})`;
+  },
+
+  linestring: (geometry: { coordinates: [number, number][] }) =>
+    `LINESTRING(${geometry.coordinates
+      .map(([x, y]) => `${x} ${y}`)
       .join(', ')})`,
-  multipoint: (value: Record<'x' | 'y', number>[]) =>
-    `MULTIPOINT(${value.map((p) => `${p.x} ${p.y}`).join(', ')})`,
-  multilinestring: (value: Record<'x' | 'y', number>[][]) =>
-    `MULTILINESTRING(${value
-      .map((line) => `(${line.map((p) => `${p.x} ${p.y}`).join(', ')})`)
+
+  polygon: (geometry: { coordinates: [number, number][][] }) =>
+    `POLYGON(${geometry.coordinates
+      .map((ring) => `(${ring.map(([x, y]) => `${x} ${y}`).join(', ')})`)
       .join(', ')})`,
-  multipolygon: (value: Record<'x' | 'y', number>[][][]) =>
-    `MULTIPOLYGON(${value
+
+  multipoint: (geometry: { coordinates: [number, number][] }) =>
+    `MULTIPOINT(${geometry.coordinates
+      .map(([x, y]) => `${x} ${y}`)
+      .join(', ')})`,
+
+  multilinestring: (geometry: { coordinates: [number, number][][] }) =>
+    `MULTILINESTRING(${geometry.coordinates
+      .map((line) => `(${line.map(([x, y]) => `${x} ${y}`).join(', ')})`)
+      .join(', ')})`,
+
+  multipolygon: (geometry: { coordinates: [number, number][][][] }) =>
+    `MULTIPOLYGON(${geometry.coordinates
       .map(
         (polygon) =>
           `(${polygon
-            .map((ring) => `(${ring.map((p) => `${p.x} ${p.y}`).join(', ')})`)
+            .map((ring) => `(${ring.map(([x, y]) => `${x} ${y}`).join(', ')})`)
             .join(', ')})`,
       )
       .join(', ')})`,
+};
+
+const transformGeometryCollection = (geometry: any) => {
+  const geometries = geometry.geometries;
+
+  return `GEOMETRYCOLLECTION(${geometries
+    .map((g: any) => {
+      const type = g.type.toLowerCase();
+
+      const convert = geoPrimitiveTransformers[type];
+
+      if (!convert) {
+        throw appErrors.mysql(createGeometryError(g.type));
+      }
+
+      return convert(g);
+    })
+    .join(', ')})`;
 };
 
 type SqlValueMapper = {
@@ -223,31 +251,28 @@ const valueRemappers: Record<string, SqlValueMapper> = {
     sql: 'ST_GeomFromText(?)',
     transform: (geometry: any) => {
       const gType = geometry.type.toLowerCase();
+
+      if (gType === 'geometrycollection') {
+        return transformGeometryCollection(geometry);
+      }
+
       const convert = geoPrimitiveTransformers[gType];
 
       if (!convert) {
         throw appErrors.mysql(createGeometryError(gType));
       }
 
-      return convert(geometry.value);
+      return convert(geometry);
     },
+  },
+
+  geometrycollection: {
+    sql: 'ST_GeomFromText(?)',
+    transform: transformGeometryCollection,
   },
   geomcollection: {
     sql: 'ST_GeomFromText(?)',
-    transform: (geometry: any) => {
-      const geometries = geometry.value;
-      return `GEOMETRYCOLLECTION(${geometries
-        .map((g: any) => {
-          const convert = geoPrimitiveTransformers[g.type.toLowerCase()];
-
-          if (!convert) {
-            throw appErrors.mysql(createGeometryError(g.type));
-          }
-
-          return convert(g.value);
-        })
-        .join(', ')})`;
-    },
+    transform: transformGeometryCollection,
   },
 
   date: {
@@ -303,5 +328,9 @@ export const transformSqlValue = (type: string, value: unknown) => {
   }
   const mapper = getValueMapper(type);
 
+  console.log(
+    'mapper--------------------------------------------------->',
+    mapper,
+  );
   return mapper?.transform ? mapper.transform(value) : value;
 };

@@ -84,6 +84,7 @@ export const updateDataRows = async (req: FastifyRequest, rsp: FastifyReply) =>
         let whereClause;
         if (keyColumns.length > 0) {
           whereClause = buildKeyWhereClause({
+            cols,
             keyColumns,
             columnsOrder,
             originalRow: row.originalRow as SqlTransportRow,
@@ -124,25 +125,27 @@ export const updateDataRows = async (req: FastifyRequest, rsp: FastifyReply) =>
 
             if (sFingerprint === row.rowToken?.fingerprint) {
               const withKeys = await selectWithKeys({
+                cols,
+                columnsOrder,
                 selectFirst,
                 allKeys,
-                columnsOrder,
                 originalRow: row.originalRow as SqlTransportRow,
                 sessionData,
               });
 
               if (withKeys) {
                 whereClause = whereWithKeys({
-                  allKeys,
-                  row: row as ChangedRow,
+                  cols,
                   columnsOrder,
+                  row: row as ChangedRow,
+                  allKeys,
                   values,
                 });
               } else {
                 whereClause = whereWithValues({
-                  row: row as ChangedRow,
-                  columnsOrder,
                   cols,
+                  columnsOrder,
+                  row: row as ChangedRow,
                   values,
                 });
               }
