@@ -165,7 +165,10 @@ export const getRealColumns = async ({
   }
 
   return columns
-    .filter((col) => !col.EXTRA?.toUpperCase().includes('GENERATED'))
+    .filter((col) => {
+      const extra = col.EXTRA?.toUpperCase() ?? '';
+      return extra !== 'VIRTUAL GENERATED' && extra !== 'STORED GENERATED';
+    })
     .map((col) => ({
       field: col.COLUMN_NAME,
       type: col.COLUMN_TYPE,

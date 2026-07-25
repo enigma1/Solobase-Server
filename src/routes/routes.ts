@@ -60,9 +60,7 @@ export const routes = async (server: FastifyInstance) => {
   server.post(
     '/db/import-data',
     {
-      config: {
-        bodyLimit: 50 * 1024 * 1024,
-      },
+      bodyLimit: 50 * 1024 * 1024,
     },
     importData,
   );
