@@ -67,10 +67,13 @@ Browser -> Optional Local Proxy -> **Solobase-Server**
 - Tested on npm v10-11
 
 #### Installation
-git clone <Solobase-Server>
+```bash
+mkdir <Solobase-Server> folder
 cd <Solobase-Server> folder
+git clone https://github.com/enigma1/Solobase-Server.git .
 npm i
 cp .env.template .env
+```
 
 #### Configuration
 **Solobase-Server** is configured through the `.env` file. The default values are suitable for a local installation, but you should review them before deployment.

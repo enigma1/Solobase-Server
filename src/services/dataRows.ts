@@ -327,10 +327,5 @@ export const transformSqlValue = (type: string, value: unknown) => {
     return null;
   }
   const mapper = getValueMapper(type);
-
-  console.log(
-    'mapper--------------------------------------------------->',
-    mapper,
-  );
   return mapper?.transform ? mapper.transform(value) : value;
 };
