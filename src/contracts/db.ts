@@ -1,9 +1,23 @@
 import { z } from 'zod';
-import { sortByAllowedChars } from '>/services';
 import { SqlTransportTypes } from '>/types';
-import { sqlQueryModes, TableShapeKeyTypes, PageSizeSchema } from './defs';
+import {
+  TableShapeKeyTypes,
+  PageSizeSchema,
+  SortDirectionSchema,
+  ColumnQueryModeSchema,
+} from './defs';
 import { emptyToUndefined } from './helpers';
 
+const JsonValueSchema: z.ZodType<SqlTransportTypes> = z.lazy(() =>
+  z.union([
+    z.string(),
+    z.number(),
+    z.boolean(),
+    z.null(),
+    z.array(JsonValueSchema),
+    z.record(z.string(), JsonValueSchema),
+  ]),
+);
 export const TableShapeColumnSchema = z.object({
   // uid: z.string().min(1),
   signature: z.string().optional(),
@@ -32,15 +46,26 @@ export const TableShapeKeySchema = z.object({
     .optional(),
 });
 
+export const SortByParamsSchema = z.object({
+  direction: SortDirectionSchema,
+});
+
 export const baseSortSchema = {
-  sortBy: z
-    .array(z.string().regex(sortByAllowedChars, 'Invalid sortBy format'))
-    .optional(),
+  sortBy: z.record(z.string(), SortByParamsSchema).optional(),
 };
 
 export const baseTableSchema = {
   database: z.string().trim().min(1).max(64),
   table: z.string().trim().min(1).max(64),
+};
+
+export const FilterColumnParamsSchema = z.object({
+  value: JsonValueSchema.optional(), // replace with your SqlTypes schema
+  mode: ColumnQueryModeSchema,
+});
+
+export const baseFiltersSchema = {
+  filters: z.record(z.string(), z.array(FilterColumnParamsSchema)).optional(),
 };
 
 export const basePaginationSchema = {
@@ -63,17 +88,6 @@ export const CommonTableSchema = z.object({
 });
 
 export const UserProfileSchema = z.enum(['admin', 'editor', 'readOnly']);
-
-const JsonValueSchema: z.ZodType<SqlTransportTypes> = z.lazy(() =>
-  z.union([
-    z.string(),
-    z.number(),
-    z.boolean(),
-    z.null(),
-    z.array(JsonValueSchema),
-    z.record(z.string(), JsonValueSchema),
-  ]),
-);
 
 export const TokenRowSchema = z.object({
   rowIndex: z.number().int().min(0),

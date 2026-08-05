@@ -1,5 +1,10 @@
 import { escape, escapeId } from 'mysql2';
-import { TableShapeColumn, TableShapeKey } from '>/types';
+import {
+  TableShapeColumn,
+  TableShapeKey,
+  FilterColumnParams,
+  SortByParams,
+} from '>/types';
 
 const buildColumnType = (col: TableShapeColumn): string => {
   const params = col.params ? Object.values(col.params).join(', ') : '';
@@ -184,7 +189,6 @@ export const buildDropKeyDefinition = (key: TableShapeKey) => {
   }
 };
 
-
 export const buildFilename = (names: string[]) => {
   let result = '';
 
@@ -194,4 +198,75 @@ export const buildFilename = (names: string[]) => {
     result = next;
   }
   return result;
+};
+
+export const buildDistinct = (
+  filters?: Record<string, FilterColumnParams[]>,
+) => {
+  if (!filters) return '';
+  const hasDistinct = Object.values(filters ?? {}).some((columnFilters) =>
+    columnFilters.some((filter) => filter.mode === 'distinct'),
+  );
+  return hasDistinct ? 'DISTINCT' : '';
+};
+
+export const buildGroupBy = (
+  filters?: Record<string, FilterColumnParams[]>,
+) => {
+  const columns = Object.entries(filters ?? {})
+    .filter(([, columnFilters]) =>
+      columnFilters.some((f) => f.mode === 'groupBy'),
+    )
+    .map(([column]) => escapeId(column));
+
+  return columns.length ? `GROUP BY ${columns.join(', ')}` : '';
+};
+
+type BuildOrderByParams = {
+  sortBy?: Record<string, SortByParams>;
+  firstColumn: string;
+};
+export const buildOrderBy = ({ sortBy, firstColumn }: BuildOrderByParams) => {
+  if (!sortBy) return '';
+  const result =
+    sortBy && Object.keys(sortBy).length
+      ? `ORDER BY ${Object.entries(sortBy)
+          .map(
+            ([column, params]) =>
+              `${escapeId(column)} ${params.direction.toUpperCase()}`,
+          )
+          .join(', ')}`
+      : `ORDER BY ${escapeId(firstColumn)}`;
+
+  return result;
+};
+
+type WhereResult = {
+  sql: string;
+  values: unknown[];
+};
+export const buildWhere = (
+  filters?: Record<string, FilterColumnParams[]>,
+): WhereResult => {
+  const conditions: string[] = [];
+  const values: unknown[] = [];
+
+  for (const [column, columnFilters] of Object.entries(filters ?? {})) {
+    for (const filter of columnFilters) {
+      if (filter.mode === 'where') {
+        conditions.push(`${escapeId(column)} = ?`);
+        values.push(filter.value);
+      }
+
+      if (filter.mode === 'like') {
+        conditions.push(`${escapeId(column)} LIKE ?`);
+        values.push(`%${filter.value}%`);
+      }
+    }
+  }
+
+  return {
+    sql: conditions.length ? `WHERE ${conditions.join(' AND ')}` : '',
+    values,
+  };
 };

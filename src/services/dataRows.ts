@@ -5,6 +5,7 @@ import type {
   SqlColumnsShape,
   SqlTransportRow,
   SessionData,
+  FilterColumnParams,
 } from '>/types';
 
 export const isSpatial = (type: string) =>

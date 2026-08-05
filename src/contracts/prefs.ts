@@ -4,7 +4,16 @@ import {
   PageSizeSchema,
   ScalarSchema,
   sqlQueryModes,
+  ColumnQueryModeSchema,
 } from './defs';
+
+const noTrim = (name: string) =>
+  z
+    .string()
+    .refine(
+      (v) => v === v.trim(),
+      `${name} must not contain leading or trailing whitespace`,
+    );
 
 export const QueryItemSchema = z.object({
   title: z.string().trim().min(1),
@@ -24,6 +33,18 @@ const SidebarVisibilitySchema = z.object({
   sideQueries: z.boolean(),
 });
 
+const FilterColumnParamsSchema = z.object({
+  value: ScalarSchema.optional(),
+  mode: ColumnQueryModeSchema,
+});
+
+const ColumnActionsSchema = z.object({
+  type: noTrim('type').min(1).max(128),
+  action: z.boolean().optional(),
+  sort: z.enum(['asc', 'desc']).optional(),
+  filters: z.array(FilterColumnParamsSchema).optional(),
+});
+
 const StorageConfigSchema = z.object({
   backPort: z.number().int().min(1).max(65535),
   hiddenColumns: z.record(z.string(), z.boolean()),
@@ -35,6 +56,7 @@ const StorageConfigSchema = z.object({
   pageSizes: z.record(PageListingsSchema, PageSizeSchema),
   allowSystemDatabases: z.boolean().optional(),
   objectEditorForJson: z.boolean().optional(),
+  pastColumnsActions: z.record(z.string(), ColumnActionsSchema).optional(),
 });
 
 export const UserPrefsSchema = StorageConfigSchema.extend({

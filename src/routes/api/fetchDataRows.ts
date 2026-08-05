@@ -1,13 +1,19 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { escapeId } from 'mysql2/promise';
 import { z } from 'zod';
-import { apiCallAuth, getColumnsOrdered } from '>/services';
 import {
+  apiCallAuth,
+  getColumnsOrdered,
   appErrors,
   fingerprint,
   hasIdentity,
   buildPaging,
   isSpatial,
+  buildDistinct,
+  buildGroupBy,
+  buildWhere,
+  buildOrderBy,
+  compatibleQueryExecution,
 } from '>/services';
 import { dbSession } from '>/db';
 import {
@@ -15,6 +21,7 @@ import {
   baseSortSchema,
   baseTableSchema,
   basePaginationSchema,
+  baseFiltersSchema,
 } from '>/contracts';
 
 import type {
@@ -44,6 +51,7 @@ const FetchDataRowsSchema = z.object({
   ...basePaginationSchema,
   ...baseTableSchema,
   ...baseSortSchema,
+  ...baseFiltersSchema,
 });
 
 export const fetchDataRows = async (req: FastifyRequest, rsp: FastifyReply) =>
@@ -52,7 +60,7 @@ export const fetchDataRows = async (req: FastifyRequest, rsp: FastifyReply) =>
     rsp,
     fn: async (sessionData): Promise<FetchRowsResponse> => {
       const request = FetchDataRowsSchema.parse(req.body);
-      const { database, table, paging: pagination, sortBy } = request;
+      const { database, table, paging: pagination, sortBy, filters } = request;
       const { limit = pageSizeValues[0], offset = 0 } = pagination ?? {};
 
       await dbSession.activate({ sessionData, database, refresh: true });
@@ -79,18 +87,23 @@ export const fetchDataRows = async (req: FastifyRequest, rsp: FastifyReply) =>
         })
         .join(', ');
 
-      const sortByList = Array.isArray(sortBy) ? sortBy : undefined;
-      const orderSql = sortByList?.length
-        ? `ORDER BY ${sortByList.join(', ')}`
-        : `ORDER BY ${escapeId(columnsOrder[0])}`;
+      const distinct = buildDistinct(filters);
+      const groupBy = buildGroupBy(filters);
+      const orderBy = buildOrderBy({ sortBy, firstColumn: columnsOrder[0] });
+      const { sql: where, values: whereValues } = buildWhere(filters);
 
       const paginationSql = `LIMIT ? OFFSET ?`;
-      const sql = `SELECT ${escapedColumns} FROM ${escapeId(database)}.${escapeId(table)} ${orderSql} ${paginationSql}`;
+      const sql = `SELECT ${distinct} ${escapedColumns} FROM ${escapeId(database)}.${escapeId(table)} ${where} ${groupBy} ${orderBy} ${paginationSql}`;
 
-      const [rowObjects] = await sessionData.sqlSession.query<SqlQueryRow[]>(
-        sql,
-        [limit + 1, offset],
-      );
+      const modes = groupBy.length > 0 ? ['NO_ENGINE_SUBSTITUTION'] : undefined;
+      const [rowObjects] = (await compatibleQueryExecution({
+        sqlSession: sessionData.sqlSession,
+        modes,
+        data: {
+          sql,
+          values: [...whereValues, limit + 1, offset],
+        },
+      })) as [SqlQueryRow[], unknown];
 
       const rowsPageResult = buildPaging({
         columnsOrder,

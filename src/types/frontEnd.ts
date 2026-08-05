@@ -1,16 +1,29 @@
 import type { ResultSetHeader, OkPacketParams } from 'mysql2/promise';
 import type { SqlColumns, CharsetMeta, StorageEngineMeta } from './mysql';
-import type { SqlRow, SqlTransportObject, SqlTransportRow } from './db';
+import type {
+  SqlRow,
+  SqlTransportObject,
+  SqlTransportRow,
+  SqlTypes,
+} from './db';
 // import type { UserPrefs } from './prefs';
-import type { GroupByModes, UserPrefs } from '>/contracts';
+import type { ColumnQueryMode, GroupByModes, UserPrefs } from '>/contracts';
 
-export type SortBy = {
-  column: string;
-  direction: 'ASC' | 'DESC';
+export type FilterColumnParams = {
+  value?: SqlTypes;
+  mode: ColumnQueryMode;
 };
 
-export type SortRequest = {
-  sortBy?: SortBy[];
+export type FilterColumnsRequest = {
+  filters?: Record<string, FilterColumnParams[]>;
+};
+
+export type SortByParams = {
+  direction: 'asc' | 'desc';
+};
+
+export type SortByRequest = {
+  sortBy?: Record<string, SortByParams>;
 };
 
 export type PagingResponse = {
@@ -107,7 +120,7 @@ export type AbortSqlRequest = {};
 export type AbortSqlResponse = BasicResponse;
 
 export type FetchTablesRequest = PagingRequest &
-  SortRequest & {
+  SortByRequest & {
     database?: string;
   };
 
@@ -152,15 +165,12 @@ export type SelectDatabaseResponse = BasicResponse & {
 };
 
 export type FetchRowsRequest = TableBasics &
-  PagingRequest & {
-    sortBy?: SortBy[];
-  };
+  PagingRequest &
+  SortByRequest &
+  FilterColumnsRequest;
 export type FetchRowsResponse = BasicDataResponse;
 
-export type FetchDatabasesRequest = PagingRequest & {
-  sortBy?: SortBy[];
-};
-
+export type FetchDatabasesRequest = PagingRequest & SortByRequest;
 export type FetchDatabasesResponse = BasicRowsShape & PagingResponse;
 
 // export type FetchRowsResponse = DbTableData & { columnsOrder: string[] };
