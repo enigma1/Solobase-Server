@@ -1,6 +1,13 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
-import { apiCallAuth, indexBy, buildPaging, systemDatabases } from '>/services';
+import {
+  apiCallAuth,
+  indexBy,
+  buildPaging,
+  systemDatabases,
+  buildOrderBy,
+  buildWhere,
+} from '>/services';
 import {
   baseSortSchema,
   baseFiltersSchema,
@@ -11,15 +18,16 @@ import {
   SessionData,
   SqlQueryRow,
   SqlColumns,
-  PagingRequest,
   FetchDatabasesResponse,
 } from '>/types';
 
 export const fetchDatabasesCommon = async (
   sessionData: SessionData,
-  pagination?: PagingRequest,
+  request: z.infer<typeof FetchDatabasesSchema>,
 ) => {
-  const { limit = pageSizeValues[0], offset = 0 } = pagination?.paging ?? {};
+  const { paging: pagination, sortBy, filters } = request;
+
+  const { limit = pageSizeValues[0], offset = 0 } = pagination ?? {};
 
   const columnsOrder: string[] = [];
   const cols = indexBy(
@@ -30,36 +38,52 @@ export const fetchDatabasesCommon = async (
     'field',
   );
 
-  const systemDbNames = [...systemDatabases];
-  const whereClause = sessionData.allowSystemDatabases
-    ? ''
-    : `WHERE SCHEMA_NAME NOT IN (${systemDbNames.map(() => '?').join(', ')})`;
+  const extraConditions = [];
+  const dbSystemNames = [...systemDatabases];
 
-  const sql = `SELECT * FROM information_schema.SCHEMATA ${whereClause} LIMIT ? OFFSET ?`;
-  const params = sessionData.allowSystemDatabases
-    ? [limit + 1, offset]
-    : [...systemDbNames, limit + 1, offset];
+  if (!sessionData.allowSystemDatabases) {
+    extraConditions.push({
+      sql: `SCHEMA_NAME NOT IN (${dbSystemNames.map(() => '?').join(', ')})`,
+      values: dbSystemNames,
+    });
+  }
 
-  const [rowObjects] = await sessionData.sqlSession.query<SqlQueryRow[]>(
-    sql,
-    params,
-  );
-
-  const rowsPageResult = buildPaging({
-    columnsOrder,
-    rowObjects,
-    limit,
-    offset,
+  const { sql: where, values: whereValues } = buildWhere({
+    filters,
+    extraConditions,
   });
 
-  const result = {
-    ...rowsPageResult,
+  const orderBy = buildOrderBy({
+    sortBy,
+    firstColumn: 'SCHEMA_NAME',
+  });
+
+  const sql = `
+    SELECT *
+    FROM information_schema.SCHEMATA
+    ${where}
+    ${orderBy}
+    LIMIT ? OFFSET ?
+  `;
+
+  const [rowObjects] = await sessionData.sqlSession.query<SqlQueryRow[]>(sql, [
+    ...whereValues,
+    limit + 1,
+    offset,
+  ]);
+
+  return {
+    ...buildPaging({
+      columnsOrder,
+      rowObjects,
+      limit,
+      offset,
+    }),
     ok: true,
     message: 'Databases Request completed successfully',
     cols,
     columnsOrder,
   };
-  return result;
 };
 
 const FetchDatabasesSchema = z.object({

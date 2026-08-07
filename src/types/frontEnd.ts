@@ -26,7 +26,7 @@ export type SortByRequest = {
   sortBy?: Record<string, SortByParams>;
 };
 
-export type CommonParamsRequest = PagingRequest &
+export type BasicDataRequest = PagingRequest &
   SortByRequest &
   FilterColumnsRequest;
 
@@ -161,15 +161,15 @@ export type SelectDatabaseResponse = BasicResponse & {
   database?: string;
 };
 
-export type FetchDatabasesRequest = CommonParamsRequest;
+export type FetchDatabasesRequest = BasicDataRequest;
 export type FetchDatabasesResponse = BasicRowsShape & PagingResponse;
 
-export type FetchTablesRequest = CommonParamsRequest & {
+export type FetchTablesRequest = BasicDataRequest & {
   database?: string;
 };
 export type FetchTablesResponse = BasicDataResponse;
 
-export type FetchRowsRequest = TableBasics & CommonParamsRequest;
+export type FetchRowsRequest = TableBasics & BasicDataRequest;
 export type FetchRowsResponse = BasicDataResponse;
 
 // export type FetchRowsResponse = DbTableData & { columnsOrder: string[] };

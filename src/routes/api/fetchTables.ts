@@ -81,7 +81,7 @@ export const fetchTables = async (req: FastifyRequest, rsp: FastifyReply) =>
         extraConditions: [
           {
             sql: 'table_schema = ?',
-            value: dbName,
+            values: [dbName],
           },
         ],
       });

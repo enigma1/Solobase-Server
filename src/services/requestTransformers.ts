@@ -248,7 +248,7 @@ type WhereResult = {
 
 type WhereCondition = {
   sql: string;
-  value: unknown;
+  values: unknown[];
 };
 
 type BuildWhereProps = {
@@ -261,7 +261,7 @@ export const buildWhere = ({
   extraConditions = [],
 }: BuildWhereProps): WhereResult => {
   const conditions = extraConditions.map((c) => c.sql);
-  const values = extraConditions.map((c) => c.value);
+  const values = extraConditions.flatMap((c) => c.values);
 
   for (const [column, columnFilters] of Object.entries(filters ?? {})) {
     for (const filter of columnFilters) {
