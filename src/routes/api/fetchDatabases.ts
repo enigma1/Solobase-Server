@@ -1,7 +1,12 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { apiCallAuth, indexBy, buildPaging, systemDatabases } from '>/services';
-import { basePaginationSchema, pageSizeValues } from '>/contracts';
+import {
+  baseSortSchema,
+  baseFiltersSchema,
+  basePaginationSchema,
+  pageSizeValues,
+} from '>/contracts';
 import {
   SessionData,
   SqlQueryRow,
@@ -59,6 +64,8 @@ export const fetchDatabasesCommon = async (
 
 const FetchDatabasesSchema = z.object({
   ...basePaginationSchema,
+  ...baseSortSchema,
+  ...baseFiltersSchema,
   system: z.boolean().optional(),
 });
 

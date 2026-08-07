@@ -7,11 +7,14 @@ import {
   appErrors,
   getRealColumns,
   buildPaging,
+  buildOrderBy,
+  buildWhere,
   indexBy,
 } from '>/services';
 import {
   baseSortSchema,
   basePaginationSchema,
+  baseFiltersSchema,
   emptyToUndefined,
   pageSizeValues,
 } from '>/contracts';
@@ -26,6 +29,8 @@ import type {
 const FetchTablesSchema = z.object({
   ...basePaginationSchema,
   ...baseSortSchema,
+  ...baseFiltersSchema,
+
   database: z.preprocess(
     emptyToUndefined,
     z.string().trim().min(1).max(64).optional(),
@@ -38,7 +43,7 @@ export const fetchTables = async (req: FastifyRequest, rsp: FastifyReply) =>
     rsp,
     fn: async (sessionData): Promise<FetchTablesResponse> => {
       const request = FetchTablesSchema.parse(req.body);
-      const { paging: pagination, database } = request;
+      const { paging: pagination, database, sortBy, filters } = request;
       const dbName = database ?? sessionData.dbSelected;
       if (!dbName) {
         throw appErrors.domain(
@@ -70,10 +75,22 @@ export const fetchTables = async (req: FastifyRequest, rsp: FastifyReply) =>
         'field',
       );
 
-      const sql = `SELECT * FROM information_schema.tables WHERE table_schema = ? LIMIT ? OFFSET ?`;
+      const orderBy = buildOrderBy({ sortBy, firstColumn: 'TABLE_NAME' });
+      const { sql: where, values: whereValues } = buildWhere({
+        filters,
+        extraConditions: [
+          {
+            sql: 'table_schema = ?',
+            value: dbName,
+          },
+        ],
+      });
+      const paginationSql = `LIMIT ? OFFSET ?`;
+      const sql = `SELECT * FROM information_schema.tables ${where} ${orderBy} ${paginationSql}`;
+
       const [rowObjects] = await sessionData.sqlSession.query<
         (SqlRow & RowDataPacket)[]
-      >(sql, [dbName, limit + 1, offset]);
+      >(sql, [...whereValues, limit + 1, offset]);
 
       const rowsPageResult = buildPaging({
         columnsOrder,

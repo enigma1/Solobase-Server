@@ -90,7 +90,7 @@ export const fetchDataRows = async (req: FastifyRequest, rsp: FastifyReply) =>
       const distinct = buildDistinct(filters);
       const groupBy = buildGroupBy(filters);
       const orderBy = buildOrderBy({ sortBy, firstColumn: columnsOrder[0] });
-      const { sql: where, values: whereValues } = buildWhere(filters);
+      const { sql: where, values: whereValues } = buildWhere({ filters });
 
       const paginationSql = `LIMIT ? OFFSET ?`;
       const sql = `SELECT ${distinct} ${escapedColumns} FROM ${escapeId(database)}.${escapeId(table)} ${where} ${groupBy} ${orderBy} ${paginationSql}`;

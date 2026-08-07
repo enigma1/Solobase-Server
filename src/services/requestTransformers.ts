@@ -245,11 +245,23 @@ type WhereResult = {
   sql: string;
   values: unknown[];
 };
-export const buildWhere = (
-  filters?: Record<string, FilterColumnParams[]>,
-): WhereResult => {
-  const conditions: string[] = [];
-  const values: unknown[] = [];
+
+type WhereCondition = {
+  sql: string;
+  value: unknown;
+};
+
+type BuildWhereProps = {
+  filters?: Record<string, FilterColumnParams[]>;
+  extraConditions?: WhereCondition[];
+};
+
+export const buildWhere = ({
+  filters,
+  extraConditions = [],
+}: BuildWhereProps): WhereResult => {
+  const conditions = extraConditions.map((c) => c.sql);
+  const values = extraConditions.map((c) => c.value);
 
   for (const [column, columnFilters] of Object.entries(filters ?? {})) {
     for (const filter of columnFilters) {
