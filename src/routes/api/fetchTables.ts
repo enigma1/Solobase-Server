@@ -19,12 +19,7 @@ import {
   pageSizeValues,
 } from '>/contracts';
 
-import type {
-  SqlColumns,
-  FetchTablesRequest,
-  FetchTablesResponse,
-  SqlRow,
-} from '>/types';
+import type { SqlColumns, FetchTablesResponse, SqlQueryRow } from '>/types';
 
 const FetchTablesSchema = z.object({
   ...basePaginationSchema,
@@ -88,9 +83,10 @@ export const fetchTables = async (req: FastifyRequest, rsp: FastifyReply) =>
       const paginationSql = `LIMIT ? OFFSET ?`;
       const sql = `SELECT * FROM information_schema.tables ${where} ${orderBy} ${paginationSql}`;
 
-      const [rowObjects] = await sessionData.sqlSession.query<
-        (SqlRow & RowDataPacket)[]
-      >(sql, [...whereValues, limit + 1, offset]);
+      const [rowObjects] = await sessionData.sqlSession.query<SqlQueryRow[]>(
+        sql,
+        [...whereValues, limit + 1, offset],
+      );
 
       const rowsPageResult = buildPaging({
         columnsOrder,
