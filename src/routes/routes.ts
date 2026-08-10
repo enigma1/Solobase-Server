@@ -10,6 +10,7 @@ import {
   deleteDatabases,
   exportDatabases,
   exportTables,
+  exportCsvTable,
   getTableDetails,
   getTableColumnsInfo,
   fetchDatabaseInfo,
@@ -69,6 +70,7 @@ export const routes = async (server: FastifyInstance) => {
   server.post('/db/delete-tables', deleteTables);
   server.post('/db/export-databases', exportDatabases);
   server.post('/db/export-tables', exportTables);
+  server.post('/db/export-csv-table', exportCsvTable);
   server.post('/db/create-database', createDatabase);
   server.post('/db/edit-database', editDatabase);
   server.post('/db/delete-databases', deleteDatabases);

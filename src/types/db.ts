@@ -7,3 +7,4 @@ export type SqlTransportRow = SqlTransportTypes[];
 export type SqlTypes = Date | bigint | JSONTypes | null;
 export type SqlObject = { [key in string]?: SqlTypes };
 export type SqlRow = SqlTypes[];
+export type SqlRows = SqlRow[];
