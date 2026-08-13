@@ -5,3 +5,4 @@ export * from './transforms';
 export * from './connections';
 export * from './errors';
 export * from './prefs';
+export * from './prompt';

@@ -38,6 +38,7 @@ export type MySqlCaps = {
 
 export type SessionData = MySqlCaps & {
   sessionId: string; // the generated UUID
+  conversationId: string; // ai conversation Id
   xSession: XApiSession; // the xDevApi MySQL session
   sqlSession: SqlConnection; // the classic MySQL session
   streamSession: StreamConnection; // the stream MySql session

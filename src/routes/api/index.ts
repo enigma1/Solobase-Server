@@ -28,3 +28,5 @@ export * from './fetchDataRows';
 export * from './createDataRows';
 export * from './deleteDataRows';
 export * from './importData';
+export * from './makePrompt';
+export * from './getPrompts';

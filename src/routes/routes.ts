@@ -33,6 +33,8 @@ import {
   deleteTables,
   checkSession,
   importData,
+  getPrompts,
+  makePrompt,
 } from './api';
 
 export const routes = async (server: FastifyInstance) => {
@@ -79,4 +81,6 @@ export const routes = async (server: FastifyInstance) => {
   server.get('/db/fetch-database-info', fetchDatabaseInfo);
   server.post('/app/load-preferences', loadPreferences);
   server.post('/app/save-preferences', savePreferences);
+  server.post('/ai/get-prompts', getPrompts);
+  server.post('/ai/make-prompt', makePrompt);
 };

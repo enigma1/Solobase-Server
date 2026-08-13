@@ -6,29 +6,33 @@ import type {
   SqlTransportRow,
   SqlTypes,
 } from './db';
+import type { PromptData } from './prompt';
 // import type { UserPrefs } from './prefs';
-import type { ColumnQueryMode, GroupByModes, UserPrefs } from '>/contracts';
+import type {
+  SortDirection,
+  ColumnQueryMode,
+  GroupByModes,
+  UserPrefs,
+} from '>/contracts';
 
+export type TableBasicsUndefined = {
+  database?: string;
+  table?: string;
+};
 export type FilterColumnParams = {
   value?: SqlTypes;
   mode: ColumnQueryMode;
 };
 
-export type FilterColumnsRequest = {
+export type BasicFiltersShape = {
   filters?: Record<string, FilterColumnParams[]>;
 };
 
-export type SortByParams = {
-  direction: 'asc' | 'desc';
-};
+export type FilterColumnsRequest = BasicFiltersShape;
 
 export type SortByRequest = {
-  sortBy?: Record<string, SortByParams>;
+  sortBy?: Record<string, SortDirection>;
 };
-
-export type BasicDataRequest = PagingRequest &
-  SortByRequest &
-  FilterColumnsRequest;
 
 export type PagingResponse = {
   paging?: {
@@ -43,6 +47,10 @@ export type PagingRequest = {
     limit: number;
   };
 };
+
+export type BasicDataRequest = PagingRequest &
+  SortByRequest &
+  FilterColumnsRequest;
 
 export type QueryLogEntry = {
   sql: string;
@@ -384,3 +392,22 @@ export type LoadPreferencesRequest = {
 export type LoadPreferencesResponse = BasicResponse & {
   userPrefs?: UserPrefs;
 };
+
+export type MakePromptRequest = {
+  prompt: string;
+  conversationId?: string;
+};
+
+export type MakePromptResponse = BasicResponse & {
+  frontRequest?: TableBasicsUndefined &
+    BasicDataRequest & {
+      route: string;
+    };
+  aiResponse: {
+    answer: string;
+    conversationId: string;
+  };
+};
+
+export type GetPromptsRequest = {};
+export type GetPromptsResponse = BasicResponse & PromptData;

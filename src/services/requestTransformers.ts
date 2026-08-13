@@ -1,9 +1,10 @@
 import { escape, escapeId } from 'mysql2';
+import { SortDirection } from '>/contracts';
 import {
   TableShapeColumn,
   TableShapeKey,
   FilterColumnParams,
-  SortByParams,
+  SortByRequest,
 } from '>/types';
 
 const buildColumnType = (col: TableShapeColumn): string => {
@@ -223,7 +224,7 @@ export const buildGroupBy = (
 };
 
 type BuildOrderByParams = {
-  sortBy?: Record<string, SortByParams>;
+  sortBy?: SortByRequest;
   firstColumn: string;
 };
 export const buildOrderBy = ({ sortBy, firstColumn }: BuildOrderByParams) => {

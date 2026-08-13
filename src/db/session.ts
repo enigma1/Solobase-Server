@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Connection as StreamConnection } from 'mysql2';
 import { Connection as SqlConnection, escapeId } from 'mysql2/promise';
 import { envConfig } from '>/config';
+import { conversations } from '>/ai';
 import {
   WorkerConnection,
   XApiSession,
@@ -92,6 +93,7 @@ const create = async (request: LoginRequest): Promise<SessionData> => {
   const sessionData: SessionData = {
     ...caps,
     sessionId,
+    conversationId: conversations.resolveConversationId(),
     xSession: xWorker.conn,
     sqlSession: sqlWorker.conn,
     streamSession: streamWorker.conn,
@@ -152,6 +154,7 @@ const remove = async (
       data.sqlSession.end(),
       data.xSession.close(),
       // data.ctrlSession.end(),
+      conversations.deleteConversation(data.conversationId),
     ]);
     data.streamSession.end();
     sessionStore.delete(sessionId);

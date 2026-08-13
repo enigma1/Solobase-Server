@@ -1,10 +1,14 @@
+import { initChatModel } from 'langchain';
 import { loadEnvFile } from 'node:process';
 import fs from 'fs';
+
 loadEnvFile();
+export const getEnvKey = (k: string) => process.env[k];
+process.env.ANTHROPIC_API_KEY = getEnvKey('ANTHROPIC_API_KEY');
+process.env.OPENAI_API_KEY = getEnvKey('OPENAI_API_KEY');
+process.env.GOOGLE_API_KEY = getEnvKey('GOOGLE_API_KEY');
 
 export const SOLOBASE_SERVER_VERSION = 1;
-
-export const getEnvKey = (k: string) => process.env[k];
 const useSsl = getEnvKey('SSL_ENABLED') === '1';
 export const envConfig = {
   ssl: useSsl
@@ -32,3 +36,9 @@ export const fastifyConfig = {
   logger: true,
   https: envConfig.ssl,
 };
+
+export const aiConfig = {
+  model: getEnvKey('AI_MODEL'),
+};
+
+export const aiModel = await initChatModel(aiConfig.model);

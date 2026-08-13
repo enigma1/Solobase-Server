@@ -244,6 +244,41 @@ export const apiCallUnknown = async <T>({
     { req, rsp },
   );
 
+type AiContext = {
+  sessionData: SessionData;
+  // eventually:
+  // conversation/thread information
+  // graph state
+  // etc.
+};
+type ApiCallAIProps<T> = ApiCallCommonProps & {
+  fn: (context: AiContext) => Promise<ApiResponse<T> | T>;
+};
+
+export const apiCallAI = async <T>({ req, rsp, fn }: ApiCallAIProps<T>) =>
+  handleApiFn(
+    async () => {
+      const sessionData = processOrThrowSession(req);
+      processOrThrowVersion(req);
+
+      sessionData.lastSqlActivity = getCurrentTimestamp();
+
+      rsp.setCookie(
+        'sessionId',
+        sessionData.sessionId,
+        getCookieOptions(envConfig.cookieTimeout),
+      );
+
+      const context: AiContext = {
+        sessionData,
+      };
+
+      const res = await fn(context);
+      return res;
+    },
+    { req, rsp },
+  );
+
 type StreamResponse = {
   effects?: {
     headers?: Record<string, string>;
