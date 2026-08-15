@@ -8,17 +8,15 @@ import {
   buildOrderBy,
   buildWhere,
 } from '>/services';
-import {
-  baseSortSchema,
-  baseFiltersSchema,
-  basePaginationSchema,
-  pageSizeValues,
-} from '>/contracts';
+import { pageSizeValues, FetchDatabasesSchema } from '>/contracts';
+import { queryDatabases } from '>/queries';
+
 import {
   SessionData,
   SqlQueryRow,
   SqlColumns,
   FetchDatabasesResponse,
+  FetchDatabasesRequest,
 } from '>/types';
 
 export const fetchDatabasesCommon = async (
@@ -86,19 +84,36 @@ export const fetchDatabasesCommon = async (
   };
 };
 
-const FetchDatabasesSchema = z.object({
-  ...basePaginationSchema,
-  ...baseSortSchema,
-  ...baseFiltersSchema,
-  system: z.boolean().optional(),
-});
+// export const fetchDatabases = async (req: FastifyRequest, rsp: FastifyReply) =>
+//   apiCallAuth({
+//     req,
+//     rsp,
+//     fn: async (sessionData): Promise<FetchDatabasesResponse> => {
+//       const request = FetchDatabasesSchema.parse(req.body);
+//       return fetchDatabasesCommon(sessionData, request);
+//     },
+//   });
 
 export const fetchDatabases = async (req: FastifyRequest, rsp: FastifyReply) =>
   apiCallAuth({
     req,
     rsp,
-    fn: async (sessionData): Promise<FetchDatabasesResponse> => {
-      const request = FetchDatabasesSchema.parse(req.body);
-      return fetchDatabasesCommon(sessionData, request);
+    fn: async (): Promise<FetchDatabasesResponse> => {
+      const result = await queryDatabases(
+        req.body as z.infer<typeof FetchDatabasesSchema>,
+      );
+      const { cols, columnsOrder, rowObjects, limit, offset } = result;
+      return {
+        ...buildPaging({
+          columnsOrder,
+          rowObjects,
+          limit,
+          offset,
+        }),
+        ok: true,
+        message: 'Databases Request completed successfully',
+        cols,
+        columnsOrder,
+      };
     },
   });

@@ -170,7 +170,9 @@ export type SelectDatabaseResponse = BasicResponse & {
 };
 
 export type FetchDatabasesRequest = BasicDataRequest;
-export type FetchDatabasesResponse = BasicRowsShape & PagingResponse;
+export type FetchDatabasesResponse = BasicResponse &
+  BasicRowsShape &
+  PagingResponse;
 
 export type FetchTablesRequest = BasicDataRequest & {
   database?: string;
@@ -398,11 +400,13 @@ export type MakePromptRequest = {
   conversationId?: string;
 };
 
+export type FrontRequestObject = TableBasicsUndefined &
+  BasicDataRequest & {
+    route: string;
+  };
+
 export type MakePromptResponse = BasicResponse & {
-  frontRequest?: TableBasicsUndefined &
-    BasicDataRequest & {
-      route: string;
-    };
+  frontRequest?: FrontRequestObject;
   aiResponse: {
     answer: string;
     conversationId: string;

@@ -1,6 +1,7 @@
 import { initChatModel } from 'langchain';
 import { loadEnvFile } from 'node:process';
 import fs from 'fs';
+import { ChatOllama } from '@langchain/ollama';
 
 loadEnvFile();
 export const getEnvKey = (k: string) => process.env[k];
@@ -37,8 +38,14 @@ export const fastifyConfig = {
   https: envConfig.ssl,
 };
 
-export const aiConfig = {
-  model: getEnvKey('AI_MODEL'),
-};
+// const aiConfig = {
+//   model: getEnvKey('AI_MODEL'),
+// };
 
-export const aiModel = await initChatModel(aiConfig.model);
+// export const aiModel = await initChatModel(aiConfig.model);
+
+export const aiModel = new ChatOllama({
+  model: 'qwen3.5:9b',
+  temperature: 0,
+  think: false,
+});

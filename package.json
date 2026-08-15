@@ -1,7 +1,7 @@
 {
   "name": "Solobase-Server",
   "description": "Solobase backend service for MySQL database operations, schema management, exports and client communication.",
-  "version": "0.1.19",
+  "version": "0.1.20",
   "author": "Mark Samios",
   "license": "GPL-3.0",
   "keywords": [
@@ -28,6 +28,7 @@
     "@langchain/core": "^1.2.6",
     "@langchain/google-genai": "^2.2.0",
     "@langchain/langgraph": "^1.4.9",
+    "@langchain/ollama": "^1.3.0",
     "@langchain/openai": "^1.5.7",
     "@mysql/xdevapi": "^8.0.35",
     "csv-stringify": "^6.8.3",

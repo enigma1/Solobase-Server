@@ -2,7 +2,6 @@ import { z } from 'zod';
 import { SqlTransportTypes } from '>/types';
 import {
   TableShapeKeyTypes,
-  PageSizeSchema,
   SortDirectionSchema,
   ColumnQueryModeSchema,
 } from './defs';
@@ -46,17 +45,18 @@ export const TableShapeKeySchema = z.object({
     .optional(),
 });
 
-export const SortByParamsSchema = z.object({
-  direction: SortDirectionSchema,
-});
-
 export const baseSortSchema = {
-  sortBy: z.record(z.string(), SortByParamsSchema).optional(),
+  sortBy: z.record(z.string(), SortDirectionSchema).optional(),
 };
 
 export const baseTableSchema = {
   database: z.string().trim().min(1).max(64),
   table: z.string().trim().min(1).max(64),
+};
+
+export const baseTableUndefinedSchema = {
+  database: z.string().trim().min(1).max(64).optional(),
+  table: z.string().trim().min(1).max(64).optional(),
 };
 
 export const FilterColumnParamsSchema = z.object({
@@ -71,7 +71,7 @@ export const baseFiltersSchema = {
 export const basePaginationSchema = {
   paging: z
     .object({
-      limit: PageSizeSchema,
+      limit: z.coerce.number().int().min(1),
       offset: z.coerce.number().int().min(0),
     })
     .optional(),

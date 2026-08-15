@@ -224,22 +224,20 @@ export const buildGroupBy = (
 };
 
 type BuildOrderByParams = {
-  sortBy?: SortByRequest;
+  sortBy?: Record<string, 'asc' | 'desc'>;
   firstColumn: string;
 };
-export const buildOrderBy = ({ sortBy, firstColumn }: BuildOrderByParams) => {
-  if (!sortBy) return '';
-  const result =
-    sortBy && Object.keys(sortBy).length
-      ? `ORDER BY ${Object.entries(sortBy)
-          .map(
-            ([column, params]) =>
-              `${escapeId(column)} ${params.direction.toUpperCase()}`,
-          )
-          .join(', ')}`
-      : `ORDER BY ${escapeId(firstColumn)}`;
 
-  return result;
+export const buildOrderBy = ({ sortBy, firstColumn }: BuildOrderByParams) => {
+  if (!sortBy || Object.keys(sortBy).length === 0) {
+    return `ORDER BY ${escapeId(firstColumn)}`;
+  }
+
+  return `ORDER BY ${Object.entries(sortBy)
+    .map(
+      ([column, direction]) => `${escapeId(column)} ${direction.toUpperCase()}`,
+    )
+    .join(', ')}`;
 };
 
 type WhereResult = {

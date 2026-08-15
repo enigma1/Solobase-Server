@@ -1,15 +1,12 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { CookieSerializeOptions } from '@fastify/cookie';
-import {
-  getCurrentTimestamp,
-  appErrors,
-  hasObjectProps,
-  errorResolver,
-  saveMockResponse,
-} from '>/services';
 import { dbSession, sessionStore } from '>/db';
 import { SOLOBASE_SERVER_VERSION, getEnvKey, envConfig } from '>/config';
 import { ApiResponse, SessionData } from '>/types';
+import { requestContext } from './context';
+import { getCurrentTimestamp, hasObjectProps } from './utils';
+import { saveMockResponse } from './mocks';
+import { errorResolver, appErrors } from './errorLayer';
 
 const useSsl = getEnvKey('SSL_ENABLED') === '1';
 const useCookieDomain = getEnvKey('COOKIE_USE_DOMAIN') === '1';
@@ -177,19 +174,25 @@ export const apiCallAuth = async <T>({ req, rsp, fn }: ApiCallAuthProps<T>) =>
         getCookieOptions(envConfig.cookieTimeout),
       );
 
-      const res = await fn(sessionData);
-      if (!hasObjectProps(res, ['data'])) return res;
+      return requestContext.run(sessionData, async () => {
+        const res = await fn(sessionData);
 
-      if (res.effects?.headers) {
-        for (const [key, value] of Object.entries(res.effects.headers)) {
-          rsp.header(key, value);
+        if (!hasObjectProps(res, ['data'])) {
+          return res;
         }
-      }
-      // optional status override
-      if (res.effects?.status) {
-        rsp.status(res.effects.status);
-      }
-      return res.data;
+
+        if (res.effects?.headers) {
+          for (const [key, value] of Object.entries(res.effects.headers)) {
+            rsp.header(key, value);
+          }
+        }
+
+        if (res.effects?.status) {
+          rsp.status(res.effects.status);
+        }
+
+        return res.data;
+      });
     },
     { req, rsp },
   );
@@ -247,10 +250,9 @@ export const apiCallUnknown = async <T>({
 type AiContext = {
   sessionData: SessionData;
   // eventually:
-  // conversation/thread information
-  // graph state
-  // etc.
+  // other AI-specific dependencies
 };
+
 type ApiCallAIProps<T> = ApiCallCommonProps & {
   fn: (context: AiContext) => Promise<ApiResponse<T> | T>;
 };
@@ -273,8 +275,7 @@ export const apiCallAI = async <T>({ req, rsp, fn }: ApiCallAIProps<T>) =>
         sessionData,
       };
 
-      const res = await fn(context);
-      return res;
+      return requestContext.run(sessionData, () => fn(context));
     },
     { req, rsp },
   );
@@ -300,7 +301,7 @@ export const apiCallStream = async <T>({ req, rsp, fn }: ApiCallStreamProps) =>
         sessionData.sessionId,
         getCookieOptions(envConfig.cookieTimeout),
       );
-      const res = await fn(sessionData);
+      return requestContext.run(sessionData, () => fn(sessionData));
     },
     { req, rsp, mode: 'stream' },
   );

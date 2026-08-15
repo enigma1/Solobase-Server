@@ -59,6 +59,10 @@ written by: Mark Samios [@enigma1](https://github.com/enigma1)
 - Structured error handling
 - SQL query tracking and diagnostics
 
+#### AI Integration
+Use of LLMs to generate an application-level object sends it to the frontend which uses that object to perform the operation through its existing application architecture.
+
+
 #### Typical deployment
 Browser -> Optional Local Proxy -> **Solobase-Server**
 
