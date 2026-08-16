@@ -84,6 +84,14 @@ export type BasicResponse = {
 
 export type BasicDataResponse = BasicResponse & BasicRowsShape & PagingResponse;
 
+export type AiStatus = {
+  active: boolean;
+  model: string;
+};
+export type CheckSessionResponse = BasicResponse & {
+  aiStatus: AiStatus;
+};
+
 export type DatabaseTableResponse = BasicResponse & {
   database?: string;
   table?: string;

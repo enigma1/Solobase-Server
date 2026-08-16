@@ -1,11 +1,12 @@
 import { DecisionParameters, CapabilityParameterName } from '>/contracts';
 
-export type PromptItem = {
-  asked: string;
-  answered: string;
+export type ConversationMessage = {
+  role: 'user' | 'llm';
+  content: string;
 };
+
 export type PromptData = {
-  prompts: PromptItem[];
+  prompts: ConversationMessage[];
 };
 
 export type ParameterResolver = (param: DecisionParameters) => Promise<boolean>;

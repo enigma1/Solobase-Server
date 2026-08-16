@@ -1,6 +1,6 @@
 import { mkdir } from 'node:fs/promises';
 import { server } from '>/server';
-import { startJanitors } from '>/db';
+import { startPeriodicProcesses } from '>/db';
 import { getEnvKey } from '>/config';
 
 const host = getEnvKey('BACKEND_HOST');
@@ -10,7 +10,7 @@ const prefsDir = getEnvKey('PREFERENCES_DIR') ?? 'prefs';
 const startServer = async () => {
   try {
     // Start garbage collector;
-    startJanitors();
+    startPeriodicProcesses();
     // Start Fastify server
     await mkdir(prefsDir, { recursive: true });
     await server.listen({ host, port });

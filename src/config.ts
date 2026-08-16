@@ -27,6 +27,7 @@ export const envConfig = {
 
   retiredSessionRemoval: 1000 * 60 * 5, // release after 5 minutes
   pollRetiredSessionInterval: 1000 * 60 * 2, // check every 2 minutes
+  aiCheckConnectionInterval: 5 * 60 * 1000, // check every 5 minutes
 };
 
 export const fastifyConfig = {
@@ -38,9 +39,9 @@ export const fastifyConfig = {
   https: envConfig.ssl,
 };
 
-// const aiConfig = {
-//   model: getEnvKey('AI_MODEL'),
-// };
+export const aiConfig = {
+  model: getEnvKey('AI_MODEL') ?? 'unknown',
+};
 
 // export const aiModel = await initChatModel(aiConfig.model);
 

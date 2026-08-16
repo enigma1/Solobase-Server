@@ -1,6 +1,7 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { apiCallAuth } from '>/services';
+import { getConversationMessages } from '>/ai';
 import type { GetPromptsResponse } from '>/types';
 
 const GetPromptsSchema = z.object({
@@ -12,15 +13,14 @@ export const getPrompts = async (req: FastifyRequest, rsp: FastifyReply) =>
     req,
     rsp,
     fn: async (sessionData): Promise<GetPromptsResponse> => {
-      const request = GetPromptsSchema.parse(req.body);
-      const { conversationId } = request;
+      const { conversationId } = GetPromptsSchema.parse(req.body);
 
-      const defaults = sessionData.defaults;
+      const messages = await getConversationMessages(conversationId);
 
       return {
         ok: true,
-        message: 'Prompt processed',
-        prompts: [],
+        message: 'Conversation retrieved',
+        prompts: messages,
       };
     },
   });

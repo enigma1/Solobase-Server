@@ -1,3 +1,4 @@
+import { AIMessage } from '@langchain/core/messages';
 import type { BaseMessage } from '@langchain/core/messages';
 import { appErrors } from '>/services';
 import { type CapabilityDecision, CapabilityDecisionSchema } from '>/contracts';
@@ -124,21 +125,30 @@ export const buildResponseNode = async (state: typeof promptState.State) => {
   const { decision, resolution } = state;
 
   if (!decision?.capabilityId) {
+    const answer =
+      'What would you like to see: databases, tables, or table data?';
+
     return {
-      answer: 'What would you like to see: databases, tables, or table data?',
+      answer,
       frontRequest: undefined,
+      messages: [new AIMessage(answer)],
     };
   }
 
   if (!resolution.satisfied) {
+    const answer = `I couldn't find ${resolution.condition} "${resolution.value}". Reason: ${resolution.reason}.`;
+
     return {
-      answer: `I couldn't find ${resolution.condition} "${resolution.value}". Reason: ${resolution.reason}.`,
+      answer,
       frontRequest: undefined,
+      messages: [new AIMessage(answer)],
     };
   }
 
-  const response = {
-    answer: `Executing ${decision.capabilityId}.`,
+  const answer = `Executing ${decision.capabilityId}.`;
+
+  return {
+    answer,
     frontRequest: {
       ...decision.parameters,
       route: decision.capabilityId,
@@ -147,6 +157,6 @@ export const buildResponseNode = async (state: typeof promptState.State) => {
         offset: 0,
       },
     },
+    messages: [new AIMessage(answer)],
   };
-  return response;
 };

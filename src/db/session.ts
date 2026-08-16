@@ -2,7 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Connection as StreamConnection } from 'mysql2';
 import { Connection as SqlConnection, escapeId } from 'mysql2/promise';
 import { envConfig } from '>/config';
-import { conversations } from '>/ai';
+import { conversations, startAiMonitor } from '>/ai';
 import {
   WorkerConnection,
   XApiSession,
@@ -60,9 +60,10 @@ const startIdleJanitor = () => {
   }, envConfig.pollIdleInterval);
 };
 
-export const startJanitors = () => {
+export const startPeriodicProcesses = () => {
   startRetirementJanitor();
   startIdleJanitor();
+  startAiMonitor();
 };
 
 const create = async (request: LoginRequest): Promise<SessionData> => {
