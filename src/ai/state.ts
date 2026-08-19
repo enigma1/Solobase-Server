@@ -1,6 +1,6 @@
 import { StateSchema, MessagesValue } from '@langchain/langgraph';
 import { aiModel, aiConfig, envConfig } from '>/config';
-import { FrontRequestSchema } from '>/contracts';
+import { FrontRequestSchema, QueryScopeSchema } from '>/contracts';
 import type { FrontRequestObject } from '>/types';
 
 export type PromptResult = {
@@ -12,6 +12,7 @@ export type PromptResult = {
 export const promptState = new StateSchema({
   messages: MessagesValue,
   frontRequest: FrontRequestSchema,
+  queryScope: QueryScopeSchema,
 });
 
 let aiStatus = {
@@ -20,18 +21,16 @@ let aiStatus = {
 };
 export const getAiStatus = () => aiStatus;
 
-// Check if llm service is running
 export const startAiMonitor = () => {
   const check = async () => {
     try {
       aiStatus.model = aiConfig.model;
-      const response = await fetch(aiModel.baseUrl);
-      aiStatus.active = response.ok;
-    } catch {
+      await fetch(aiConfig.healthUrl);
+      aiStatus.active = true;
+    } catch (e) {
       aiStatus.active = false;
     }
   };
-
   check();
   setInterval(check, envConfig.aiCheckConnectionInterval);
 };

@@ -40,6 +40,10 @@ export type Resolution = z.infer<typeof ResolutionSchema>;
 // });
 
 const sqlScope = ['current', 'thread'];
+
+export const QueryScopeSchema = z.enum(sqlScope);
+export type QueryScope = z.infer<typeof QueryScopeSchema>;
+
 export type SqlScope = (typeof sqlScope)[number];
 
 export const FrontRequestSchema = z

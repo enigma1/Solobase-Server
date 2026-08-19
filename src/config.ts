@@ -1,3 +1,4 @@
+import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { initChatModel } from 'langchain';
 import { loadEnvFile } from 'node:process';
 import fs from 'fs';
@@ -39,14 +40,61 @@ export const fastifyConfig = {
   https: envConfig.ssl,
 };
 
-export const aiConfig = {
-  model: getEnvKey('AI_MODEL') ?? 'unknown',
+type AIProviderConfig = {
+  model: string;
+  healthUrl: string;
+};
+const createAIConfig = (): AIProviderConfig => {
+  const model = getEnvKey('AI_MODEL') ?? 'ollama:qwen3.5:9b';
+
+  if (model.startsWith('ollama:')) {
+    return {
+      model,
+      healthUrl: 'http://localhost:11434/api/tags',
+    };
+  }
+
+  if (model.startsWith('openai:')) {
+    return {
+      model,
+      healthUrl: 'https://api.openai.com/v1/models',
+    };
+  }
+
+  if (model.startsWith('anthropic:')) {
+    return {
+      model,
+      healthUrl: 'https://api.anthropic.com/v1/models',
+    };
+  }
+
+  if (model.startsWith('google-genai:')) {
+    return {
+      model,
+      healthUrl: 'https://generativelanguage.googleapis.com/v1beta/models',
+    };
+  }
+
+  // Unknown configuration → Ollama
+  return {
+    model: 'ollama:qwen3.5:9b',
+    healthUrl: 'http://localhost:11434/api/tags',
+  };
 };
 
-// export const aiModel = await initChatModel(aiConfig.model);
+const createAIModel = async (model: string): Promise<BaseChatModel> => {
+  if (model.startsWith('ollama:')) {
+    return new ChatOllama({
+      model: model.slice('ollama:'.length),
+      temperature: 0,
+      think: false,
+    });
+  }
 
-export const aiModel = new ChatOllama({
-  model: 'qwen3.5:9b',
-  temperature: 0,
-  think: false,
-});
+  return initChatModel(model, {
+    temperature: 0,
+  });
+};
+
+export const aiConfig = createAIConfig();
+export const aiModel = await createAIModel(aiConfig.model);

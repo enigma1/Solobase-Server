@@ -1,0 +1,35 @@
+Determine whether the user's request refers to the current request
+or to information from earlier messages in the thread or conversation.
+
+Return:
+
+"current" when the user is asking for a new SQL query based on
+the request they just made.
+
+Return:
+
+"thread" when the user explicitly refers to previous messages,
+previous queries, the conversation, the thread, earlier requests,
+or asks to retrieve/summarize information from them.
+
+Examples:
+
+User: "write an sql to create database eshop"
+=> current
+
+User: "create a table called customers"
+=> current
+
+User: "give me the query we just created"
+=> thread
+
+User: "what queries have I asked for in this conversation?"
+=> thread
+
+User: "show me all the complete queries in this thread"
+=> thread
+
+User: "modify that query to add an email column"
+=> thread
+
+Return only the structured classification.
