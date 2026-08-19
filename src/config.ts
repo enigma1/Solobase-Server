@@ -27,7 +27,7 @@ export const envConfig = {
 
   retiredSessionRemoval: 1000 * 60 * 5, // release after 5 minutes
   pollRetiredSessionInterval: 1000 * 60 * 2, // check every 2 minutes
-  aiCheckConnectionInterval: 5 * 60 * 1000, // check every 5 minutes
+  aiCheckConnectionInterval: 3 * 60 * 1000, // check every 3 minutes
 };
 
 export const fastifyConfig = {

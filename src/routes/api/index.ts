@@ -30,3 +30,4 @@ export * from './deleteDataRows';
 export * from './importData';
 export * from './makePrompt';
 export * from './getPrompts';
+export * from './clearConversation';

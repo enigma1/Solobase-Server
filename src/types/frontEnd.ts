@@ -6,7 +6,7 @@ import type {
   SqlTransportRow,
   SqlTypes,
 } from './db';
-import type { PromptData } from './prompt';
+import type { PromptData, SqlHistory } from './prompt';
 // import type { UserPrefs } from './prefs';
 import type {
   SortDirection,
@@ -408,18 +408,30 @@ export type MakePromptRequest = {
   conversationId?: string;
 };
 
-export type FrontRequestObject = TableBasicsUndefined &
-  BasicDataRequest & {
-    route: string;
-  };
+export type MissingPromptParam = {
+  name: string;
+  question: string;
+};
+
+export type FrontRequestObject = {
+  completed: boolean;
+  sqlQuery: string;
+  missing: MissingPromptParam[];
+};
 
 export type MakePromptResponse = BasicResponse & {
-  frontRequest?: FrontRequestObject;
+  frontRequest: FrontRequestObject;
   aiResponse: {
-    answer: string;
     conversationId: string;
   };
 };
 
-export type GetPromptsRequest = {};
-export type GetPromptsResponse = BasicResponse & PromptData;
+export type GetPromptsRequest = {
+  conversationId: string;
+};
+export type GetPromptsResponse = BasicResponse & PromptData & SqlHistory;
+
+export type ClearConversationRequest = {
+  conversationId: string;
+};
+export type ClearConversationResponse = BasicResponse;

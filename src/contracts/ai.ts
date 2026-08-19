@@ -30,13 +30,46 @@ export const ResolutionSchema = z.object({
 
 export type Resolution = z.infer<typeof ResolutionSchema>;
 
-export const FrontRequestSchema = z.object({
-  ...baseTableUndefinedSchema,
-  ...basePaginationSchema,
-  ...baseSortSchema,
-  ...baseFiltersSchema,
+// export const FrontRequestSchema = z.object({
+//   ...baseTableUndefinedSchema,
+//   ...basePaginationSchema,
+//   ...baseSortSchema,
+//   ...baseFiltersSchema,
 
-  route: z.string().trim().min(5).max(128),
-});
+//   route: z.string().trim().min(5).max(128),
+// });
+
+const sqlScope = ['current', 'thread'];
+export type SqlScope = (typeof sqlScope)[number];
+
+export const FrontRequestSchema = z
+  .object({
+    completed: z.boolean(),
+    sqlQuery: z.string(),
+    queryScope: z.enum(sqlScope),
+    missing: z.array(
+      z.object({
+        name: z.string(),
+        question: z.string(),
+      }),
+    ),
+  })
+  .superRefine((data, ctx) => {
+    if (!data.completed && data.missing.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['missing'],
+        message: 'Incomplete request must contain missing information',
+      });
+    }
+
+    if (data.completed && data.missing.length > 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['missing'],
+        message: 'Completed request cannot contain missing information',
+      });
+    }
+  });
 
 export type FrontRequestObject = z.infer<typeof FrontRequestSchema>;

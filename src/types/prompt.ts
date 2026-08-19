@@ -9,6 +9,10 @@ export type PromptData = {
   prompts: ConversationMessage[];
 };
 
+export type SqlHistory = {
+  sqlHistory: string[];
+};
+
 export type ParameterResolver = (param: DecisionParameters) => Promise<boolean>;
 
 export type CapabilityParameter = {

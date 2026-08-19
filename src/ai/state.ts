@@ -1,11 +1,6 @@
-import { z } from 'zod';
 import { StateSchema, MessagesValue } from '@langchain/langgraph';
-import { aiModel, aiConfig } from '>/config';
-import {
-  FrontRequestSchema,
-  CapabilityDecisionSchema,
-  ResolutionSchema,
-} from '>/contracts';
+import { aiModel, aiConfig, envConfig } from '>/config';
+import { FrontRequestSchema } from '>/contracts';
 import type { FrontRequestObject } from '>/types';
 
 export type PromptResult = {
@@ -16,11 +11,7 @@ export type PromptResult = {
 
 export const promptState = new StateSchema({
   messages: MessagesValue,
-  decision: CapabilityDecisionSchema.optional(),
-  resolution: ResolutionSchema,
-  frontRequest: FrontRequestSchema.optional(),
-  answer: z.string().default(''),
-  // other graph state...
+  frontRequest: FrontRequestSchema,
 });
 
 let aiStatus = {
@@ -28,6 +19,8 @@ let aiStatus = {
   model: aiConfig.model,
 };
 export const getAiStatus = () => aiStatus;
+
+// Check if llm service is running
 export const startAiMonitor = () => {
   const check = async () => {
     try {
@@ -40,5 +33,5 @@ export const startAiMonitor = () => {
   };
 
   check();
-  setInterval(check, 5 * 60 * 1000);
+  setInterval(check, envConfig.aiCheckConnectionInterval);
 };

@@ -1,0 +1,102 @@
+Examples:
+
+Example 1 — Current request:
+
+Current user request:
+<request containing all information required to construct SQL>
+
+Expected:
+completed: true
+
+queryScope: "current"
+
+sqlQuery:
+<only SQL required to satisfy the current request>
+
+Do not include SQL generated for previous requests.
+
+
+Example 2 — Multiple statements:
+
+Current user request:
+<a request that requires multiple SQL statements>
+
+Expected:
+completed: true
+
+queryScope: "current"
+
+sqlQuery:
+<first statement required by the current request>
+
+<second statement required by the current request>
+
+Include only statements required by the current request.
+
+
+Example 3 — Missing information:
+
+Current user request:
+<a request that cannot be completed because required information
+is missing or ambiguous>
+
+Expected:
+completed: false
+
+queryScope: "current"
+
+sqlQuery:
+""
+
+missing:
+<one or more concise questions identifying the missing information>
+
+Do not invent the missing information.
+
+
+Example 4 — Explicit thread request:
+
+Current user request:
+<a request explicitly asking for the SQL generated across the
+conversation>
+
+Expected:
+queryScope: "thread"
+
+The application can retrieve completed SQL statements from the
+conversation history.
+
+Do not generate or invent SQL that is not present in the conversation.
+
+
+Example 5 — Explicitly provided information:
+
+Current user request:
+<a request where all required names, values, relationships,
+conditions, or other SQL requirements are explicitly provided>
+
+Expected:
+completed: true
+
+queryScope: "current"
+
+Generate SQL using the information provided by the user.
+
+Do not request information that is already provided.
+
+
+Example 6 — Ambiguous requirement:
+
+Current user request:
+<a request where multiple interpretations are possible and choosing
+one would change the resulting SQL>
+
+Expected:
+completed: false
+
+queryScope: "current"
+
+missing:
+<concise question that resolves the ambiguity>
+
+Do not choose an interpretation merely because it is conventional.

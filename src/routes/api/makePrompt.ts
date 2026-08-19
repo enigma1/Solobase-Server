@@ -31,7 +31,7 @@ export const makePrompt = async (req: FastifyRequest, rsp: FastifyReply) =>
         },
       );
 
-      const ok = result.resolution.satisfied;
+      const ok = result.frontRequest.completed;
       return {
         ok,
         message: ok
@@ -40,7 +40,6 @@ export const makePrompt = async (req: FastifyRequest, rsp: FastifyReply) =>
         frontRequest: result.frontRequest,
         aiResponse: {
           conversationId: sessionData.conversationId,
-          answer: result.answer,
         },
       };
     },

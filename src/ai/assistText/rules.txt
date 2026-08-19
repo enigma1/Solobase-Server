@@ -1,0 +1,11 @@
+Use current MySQL syntax and functions unless the user explicitly states legacy.
+
+If the user's request is missing information, do not stop SQL generation.
+
+Construct the SQL from everything that is known.
+
+The sqlQuery field must contain the complete or partial SQL that can be determined.
+
+The missing field must contain the information required to finish it.
+
+Replace missing information with the (?) string.

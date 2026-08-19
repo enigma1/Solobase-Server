@@ -1,7 +1,7 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { apiCallAuth } from '>/services';
-import { getConversationMessages } from '>/ai';
+import { getConversationMessages, getConversationSql } from '>/ai';
 import type { GetPromptsResponse } from '>/types';
 
 const GetPromptsSchema = z.object({
@@ -12,15 +12,19 @@ export const getPrompts = async (req: FastifyRequest, rsp: FastifyReply) =>
   apiCallAuth({
     req,
     rsp,
-    fn: async (sessionData): Promise<GetPromptsResponse> => {
+    fn: async (): Promise<GetPromptsResponse> => {
       const { conversationId } = GetPromptsSchema.parse(req.body);
 
-      const messages = await getConversationMessages(conversationId);
+      const [messages, sqlHistory] = await Promise.all([
+        getConversationMessages(conversationId),
+        getConversationSql(conversationId),
+      ]);
 
       return {
         ok: true,
         message: 'Conversation retrieved',
         prompts: messages,
+        sqlHistory,
       };
     },
   });

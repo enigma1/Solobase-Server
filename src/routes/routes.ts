@@ -35,6 +35,7 @@ import {
   importData,
   getPrompts,
   makePrompt,
+  clearConversation,
 } from './api';
 
 export const routes = async (server: FastifyInstance) => {
@@ -83,4 +84,5 @@ export const routes = async (server: FastifyInstance) => {
   server.post('/app/save-preferences', savePreferences);
   server.post('/ai/get-prompts', getPrompts);
   server.post('/ai/make-prompt', makePrompt);
+  server.post('/ai/clear-conversation', clearConversation);
 };
