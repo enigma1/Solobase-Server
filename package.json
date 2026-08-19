@@ -1,7 +1,7 @@
 {
   "name": "Solobase-Server",
   "description": "Solobase backend service for MySQL database operations, schema management, exports and client communication.",
-  "version": "0.1.23",
+  "version": "0.1.24",
   "author": "Mark Samios",
   "license": "GPL-3.0",
   "keywords": [
