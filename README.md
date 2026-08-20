@@ -76,7 +76,14 @@ The backend provides an LLM-powered SQL assistant for generating MySQL queries f
 
 The AI integration is designed around the existing application architecture: the LLM does not execute SQL or access database results directly. Instead, it generates a structured application-level request that is returned to the frontend, which then performs the requested operation through the normal application API and state-management flow.
 
-Features include:
+Verified: Ollama and Google Gemini have been tested end-to-end. OpenAI and Anthropic are supported through LangChain's initChatModel, but have not been end-to-end tested because their API currently requires prepaid credits.
+
+##### OpenRouter models
+
+The SQL assistant can also use models available through [OpenRouter](https://openrouter.ai/).
+OpenRouter provides access to models from multiple providers through a common OpenAI-compatible API. You can see a full list of models from the from the interface on the front end (Server -> Get Open Router Models).
+
+Assistant Features include:
 
 - **Natural-language SQL generation** — Users can describe database operations in plain language and the assistant generates the corresponding MySQL SQL.
 - **Structured output** — LLM responses are validated against a Zod schema before being passed to the application.

@@ -3,6 +3,7 @@ import { initChatModel } from 'langchain';
 import { loadEnvFile } from 'node:process';
 import fs from 'fs';
 import { ChatOllama } from '@langchain/ollama';
+import { ChatOpenAI } from '@langchain/openai';
 
 loadEnvFile();
 export const getEnvKey = (k: string) => process.env[k];
@@ -75,7 +76,14 @@ const createAIConfig = (): AIProviderConfig => {
     };
   }
 
-  // Unknown configuration → Ollama
+  if (model.startsWith('openai-compatible:')) {
+    return {
+      model,
+      healthUrl: 'https://openrouter.ai/api/v1/models',
+    };
+  }
+
+  // Unknown configuration switch to Ollama
   return {
     model: 'ollama:qwen3.5:9b',
     healthUrl: 'http://localhost:11434/api/tags',
@@ -88,6 +96,17 @@ const createAIModel = async (model: string): Promise<BaseChatModel> => {
       model: model.slice('ollama:'.length),
       temperature: 0,
       think: false,
+    });
+  }
+
+  if (model.startsWith('openai-compatible:')) {
+    return new ChatOpenAI({
+      model: model.slice('openai-compatible:'.length),
+      temperature: 0,
+      apiKey: getEnvKey('OPENROUTER_API_KEY'),
+      configuration: {
+        baseURL: 'https://openrouter.ai/api/v1',
+      },
     });
   }
 

@@ -31,3 +31,4 @@ export * from './importData';
 export * from './makePrompt';
 export * from './getPrompts';
 export * from './clearConversation';
+export * from './getOpenRouterModels';

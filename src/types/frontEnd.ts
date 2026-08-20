@@ -2,11 +2,13 @@ import type { ResultSetHeader, OkPacketParams } from 'mysql2/promise';
 import type { SqlColumns, CharsetMeta, StorageEngineMeta } from './mysql';
 import type {
   SqlRow,
+  SqlRows,
   SqlTransportObject,
   SqlTransportRow,
   SqlTypes,
 } from './db';
 import type { PromptData, SqlHistory } from './prompt';
+import type { OpenRouterModels } from './models';
 // import type { UserPrefs } from './prefs';
 import type {
   SortDirection,
@@ -103,7 +105,7 @@ export type TokenRow = {
   fingerprint: string;
 };
 export type BasicRowsShape = {
-  rows: SqlRow[];
+  rows: SqlRows;
   cols: SqlColumnsShape;
   columnsOrder: string[];
   rowTokens?: TokenRow[];
@@ -435,3 +437,7 @@ export type ClearConversationRequest = {
   conversationId: string;
 };
 export type ClearConversationResponse = BasicResponse;
+
+export type GetOpenRouterModelsResponse = BasicResponse & {
+  models: OpenRouterModels;
+};

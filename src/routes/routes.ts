@@ -36,6 +36,7 @@ import {
   getPrompts,
   makePrompt,
   clearConversation,
+  getOpenRouterModels,
 } from './api';
 
 export const routes = async (server: FastifyInstance) => {
@@ -85,4 +86,5 @@ export const routes = async (server: FastifyInstance) => {
   server.post('/ai/get-prompts', getPrompts);
   server.post('/ai/make-prompt', makePrompt);
   server.post('/ai/clear-conversation', clearConversation);
+  server.get('/ai/get-open-router-models', getOpenRouterModels);
 };
